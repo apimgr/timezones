@@ -1,0 +1,44 @@
+# Development/Testing Docker Compose Configuration
+# Uses /tmp for ephemeral storage
+# External port: 64181:80 (random unused port in 64xxx range)
+
+services:
+  timezones:
+    image: timezones:dev
+    container_name: timezones-test
+    restart: "no"
+
+    environment:
+      - CONFIG_DIR=/config
+      - DATA_DIR=/data
+      - LOGS_DIR=/logs
+      - PORT=80
+      - ADDRESS=0.0.0.0
+      - DB_PATH=/data/db/timezones.db
+      - ADMIN_USER=administrator
+      - ADMIN_PASSWORD=testpass123
+      - DEV=true
+
+    volumes:
+      - /tmp/timezones/rootfs/config/timezones:/config
+      - /tmp/timezones/rootfs/data/timezones:/data
+      - /tmp/timezones/rootfs/logs/timezones:/logs
+
+    ports:
+      - "64181:80"
+
+    networks:
+      - timezones
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/timezones", "--status"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  timezones:
+    name: timezones
+    external: false
+    driver: bridge

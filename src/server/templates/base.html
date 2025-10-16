@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Timezones API</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="icon" href="/static/favicon.png">
+</head>
+<body>
+    <header id="main-header">
+        <div class="header-container">
+            <div class="header-left">
+                <a class="logo" href="/">Timezones API</a>
+            </div>
+            <nav id="main-nav" class="header-center">
+                <a href="/">Home</a>
+                <a href="/api/v1/timezones.json" target="_blank">JSON Data</a>
+                <a href="https://github.com/casjay/timezones" target="_blank">GitHub</a>
+            </nav>
+            <div class="header-right">
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content">
+        {{template "content" .}}
+    </main>
+
+    <footer id="main-footer">
+        <div class="footer-container">
+            <p>&copy; 2024 Timezones API - MIT License</p>
+        </div>
+    </footer>
+
+    <div id="toast-container"></div>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
