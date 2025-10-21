@@ -17,10 +17,9 @@ RUN go mod download
 COPY src/ ./src/
 
 # Build static binary with all assets embedded
-RUN CGO_ENABLED=1 GOOS=linux go build \
-    -ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildDate=${BUILD_DATE} -w -s -extldflags '-static'" \
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildDate=${BUILD_DATE} -w -s" \
     -a -installsuffix cgo \
-    -tags 'osusergo netgo sqlite_omit_load_extension' \
     -o timezones \
     ./src
 

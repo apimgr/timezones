@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/mux"
 )
 
 // APIResponse represents a standardized API response
@@ -42,9 +42,9 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, APIResponse{
 		Success: true,
 		Data: map[string]interface{}{
-			"status":    "healthy",
-			"version":   s.version,
-			"timezones": s.tzService.Count(),
+			"status":      "healthy",
+			"version":     s.version,
+			"timezones":   s.tzService.Count(),
 		},
 	})
 }
@@ -80,7 +80,8 @@ func (s *Server) handleTimezonesSearch(w http.ResponseWriter, r *http.Request) {
 
 // handleTimezonesByOffset returns timezones by UTC offset
 func (s *Server) handleTimezonesByOffset(w http.ResponseWriter, r *http.Request) {
-	offsetStr := chi.URLParam(r, "offset")
+	vars := mux.Vars(r)
+	offsetStr := vars["offset"]
 
 	offset, err := strconv.ParseFloat(offsetStr, 64)
 	if err != nil {
@@ -97,7 +98,8 @@ func (s *Server) handleTimezonesByOffset(w http.ResponseWriter, r *http.Request)
 
 // handleTimezonesByAbbr returns timezones by abbreviation
 func (s *Server) handleTimezonesByAbbr(w http.ResponseWriter, r *http.Request) {
-	abbr := chi.URLParam(r, "abbr")
+	vars := mux.Vars(r)
+	abbr := vars["abbr"]
 
 	results := s.tzService.GetByAbbr(abbr)
 	respondJSON(w, http.StatusOK, APIResponse{
@@ -108,7 +110,8 @@ func (s *Server) handleTimezonesByAbbr(w http.ResponseWriter, r *http.Request) {
 
 // handleTimezonesByUTC returns timezone by UTC identifier
 func (s *Server) handleTimezonesByUTC(w http.ResponseWriter, r *http.Request) {
-	utc := chi.URLParam(r, "utc")
+	vars := mux.Vars(r)
+	utc := vars["utc"]
 
 	result := s.tzService.GetByUTC(utc)
 	if result == nil {
@@ -124,7 +127,8 @@ func (s *Server) handleTimezonesByUTC(w http.ResponseWriter, r *http.Request) {
 
 // handleTimezoneByValue returns timezone by value
 func (s *Server) handleTimezoneByValue(w http.ResponseWriter, r *http.Request) {
-	value := chi.URLParam(r, "value")
+	vars := mux.Vars(r)
+	value := vars["value"]
 
 	result := s.tzService.GetByValue(value)
 	if result == nil {

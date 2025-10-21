@@ -1,4 +1,4 @@
-.PHONY: build test docker docker-dev clean release help
+.PHONY: build test test-docker docker docker-dev clean release help quick
 
 # Project configuration
 PROJECTNAME := timezones
@@ -38,7 +38,7 @@ help:
 	@echo ""
 	@echo "Current version: $(VERSION)"
 
-# Build binaries for all platforms
+# Build binaries for all platforms (uses Docker for consistent builds)
 build:
 	@echo "Building $(PROJECTNAME) v$(VERSION)..."
 	@mkdir -p binaries releases
@@ -47,19 +47,33 @@ build:
 		EXT="" ; \
 		if [ "$$GOOS" = "windows" ]; then EXT=".exe"; fi ; \
 		echo "  Building $$GOOS/$$GOARCH..." ; \
-		CGO_ENABLED=1 GOOS=$$GOOS GOARCH=$$GOARCH go build \
-			-ldflags "$(LDFLAGS)" \
+		docker run --rm -v $$(pwd):/workspace -w /workspace golang:alpine sh -c \
+			"CGO_ENABLED=0 GOOS=$$GOOS GOARCH=$$GOARCH go build \
+			-ldflags '$(LDFLAGS)' \
 			-o binaries/$(PROJECTNAME)-$$GOOS-$$GOARCH$$EXT \
-			./src ; \
+			./src" ; \
 		cp binaries/$(PROJECTNAME)-$$GOOS-$$GOARCH$$EXT releases/ ; \
 	done
 	@echo "✓ Build complete: binaries/"
 
-# Run tests
+# Run tests (in Docker container)
 test:
 	@echo "Running tests..."
-	@go test -v -race -timeout 5m ./...
+	@docker run --rm -v $$(pwd):/workspace -w /workspace golang:alpine \
+		sh -c 'go test -v -race -timeout 5m ./...'
 	@echo "✓ Tests passed"
+
+# Test with docker-compose
+test-docker:
+	@echo "Testing with docker-compose..."
+	@docker-compose -f docker-compose.test.yml up -d
+	@echo "Waiting for service..."
+	@timeout 30 bash -c 'until curl -sf http://localhost:64181/healthz; do sleep 1; done'
+	@echo "✓ Service is running"
+	@docker-compose -f docker-compose.test.yml logs
+	@docker-compose -f docker-compose.test.yml down
+	@sudo rm -rf /tmp/$(PROJECTNAME)/rootfs
+	@echo "✓ Test complete"
 
 # Build and push multi-platform Docker images (release)
 docker:
@@ -110,12 +124,13 @@ release: build
 		exit 1 ; \
 	fi
 
-# Build for host platform only (quick build for testing)
+# Build for host platform only (quick build for testing, uses Docker)
 quick:
 	@echo "Building for host platform..."
 	@mkdir -p binaries
-	@CGO_ENABLED=1 go build \
+	@docker run --rm -v $$(pwd):/workspace -w /workspace golang:alpine sh -c \
+		'CGO_ENABLED=0 go build \
 		-ldflags "$(LDFLAGS)" \
 		-o binaries/$(PROJECTNAME) \
-		./src
+		./src'
 	@echo "✓ Binary: binaries/$(PROJECTNAME)"

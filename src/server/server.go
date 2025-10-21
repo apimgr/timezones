@@ -6,25 +6,27 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/casjay/timezones/src/security"
 	"github.com/casjay/timezones/src/timezones"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // Server represents the HTTP server
 type Server struct {
-	router      *mux.Router
-	tzService   *timezones.Service
-	address     string
-	port        string
-	version     string
-	buildDate   string
-	commit      string
+	router    *chi.Mux
+	tzService *timezones.Service
+	address   string
+	port      string
+	version   string
+	buildDate string
+	commit    string
 }
 
 // New creates a new HTTP server
 func New(tzService *timezones.Service, address, port, version, buildDate, commit string) *Server {
 	s := &Server{
-		router:    mux.NewRouter(),
+		router:    chi.NewRouter(),
 		tzService: tzService,
 		address:   address,
 		port:      port,
@@ -33,41 +35,80 @@ func New(tzService *timezones.Service, address, port, version, buildDate, commit
 		commit:    commit,
 	}
 
+	s.setupMiddleware()
 	s.setupRoutes()
 	return s
+}
+
+// setupMiddleware configures global middleware
+func (s *Server) setupMiddleware() {
+	// Recovery from panics
+	s.router.Use(middleware.Recoverer)
+
+	// Request ID
+	s.router.Use(middleware.RequestID)
+
+	// Real IP
+	s.router.Use(middleware.RealIP)
+
+	// Logger
+	s.router.Use(middleware.Logger)
+
+	// Timeout
+	s.router.Use(middleware.Timeout(60 * time.Second))
+
+	// Throttle concurrent requests
+	s.router.Use(middleware.Throttle(1000))
+
+	// Global rate limiting
+	s.router.Use(security.GlobalRateLimiter())
+
+	// Security headers
+	s.router.Use(security.SecurityHeadersMiddleware)
+
+	// CORS
+	s.router.Use(s.corsMiddleware)
 }
 
 // setupRoutes configures all HTTP routes
 func (s *Server) setupRoutes() {
 	// Static files
-	s.router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	fileServer := http.FileServer(http.FS(staticFS))
+	s.router.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 	// Public routes
-	s.router.HandleFunc("/", s.handleHome).Methods("GET")
-	s.router.HandleFunc("/healthz", s.handleHealth).Methods("GET")
-	s.router.HandleFunc("/status", s.handleHealth).Methods("GET")
+	s.router.Get("/", s.handleHome)
+	s.router.Get("/healthz", s.handleHealth)
+	s.router.Get("/status", s.handleHealth)
 
 	// API v1 routes
-	api := s.router.PathPrefix("/api/v1").Subrouter()
-	api.HandleFunc("/timezones.json", s.handleTimezonesJSON).Methods("GET")
-	api.HandleFunc("/timezones", s.handleTimezonesAll).Methods("GET")
-	api.HandleFunc("/timezones/search", s.handleTimezonesSearch).Methods("GET")
-	api.HandleFunc("/timezones/offset/{offset}", s.handleTimezonesByOffset).Methods("GET")
-	api.HandleFunc("/timezones/abbr/{abbr}", s.handleTimezonesByAbbr).Methods("GET")
-	api.HandleFunc("/timezones/utc/{utc}", s.handleTimezonesByUTC).Methods("GET")
-	api.HandleFunc("/timezones/value/{value}", s.handleTimezoneByValue).Methods("GET")
-	api.HandleFunc("/stats", s.handleStats).Methods("GET")
-	api.HandleFunc("/health", s.handleHealth).Methods("GET")
+	s.router.Route("/api/v1", func(r chi.Router) {
+		// Apply API rate limiting
+		r.Use(security.APIRateLimiter())
 
-	// Admin routes (protected by middleware)
-	admin := api.PathPrefix("/admin").Subrouter()
-	admin.Use(s.authMiddleware)
-	admin.HandleFunc("/settings", s.handleAdminSettings).Methods("GET", "POST")
-	admin.HandleFunc("/settings/{key}", s.handleAdminSettingDelete).Methods("DELETE")
+		// Timezone endpoints
+		r.Get("/timezones.json", s.handleTimezonesJSON)
+		r.Get("/timezones", s.handleTimezonesAll)
+		r.Get("/timezones/search", s.handleTimezonesSearch)
+		r.Get("/timezones/offset/{offset}", s.handleTimezonesByOffset)
+		r.Get("/timezones/abbr/{abbr}", s.handleTimezonesByAbbr)
+		r.Get("/timezones/utc/{utc}", s.handleTimezonesByUTC)
+		r.Get("/timezones/value/{value}", s.handleTimezoneByValue)
 
-	// Middleware
-	s.router.Use(s.loggingMiddleware)
-	s.router.Use(s.corsMiddleware)
+		// Stats & health
+		r.Get("/stats", s.handleStats)
+		r.Get("/health", s.handleHealth)
+
+		// Admin routes (protected)
+		r.Group(func(r chi.Router) {
+			r.Use(security.AdminRateLimiter())
+			r.Use(s.authMiddleware)
+
+			r.Get("/admin/settings", s.handleAdminSettings)
+			r.Post("/admin/settings", s.handleAdminSettings)
+			r.Delete("/admin/settings/{key}", s.handleAdminSettingDelete)
+		})
+	})
 }
 
 // Start starts the HTTP server
@@ -75,27 +116,18 @@ func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%s", s.address, s.port)
 
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      s.router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:           addr,
+		Handler:        s.router,
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   15 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1MB
 	}
 
 	log.Printf("Starting server on %s", addr)
 	log.Printf("Version: %s (built on %s, commit %s)", s.version, s.buildDate, s.commit)
-	log.Printf("Access URL: http://%s:%s", s.address, s.port)
 
 	return srv.ListenAndServe()
-}
-
-// loggingMiddleware logs all HTTP requests
-func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Printf("%s %s %s", r.Method, r.RequestURI, time.Since(start))
-	})
 }
 
 // corsMiddleware adds CORS headers
