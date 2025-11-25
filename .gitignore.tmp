@@ -1,4 +1,3 @@
-# gitignore created on 11/25/25 at 13:05
 # Disable reminder in prompt
 ignoredirmessage
 
@@ -7,7 +6,6 @@ ignoredirmessage
 
 # OS generated files
 ### Linux ###
-*~
 
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
@@ -52,7 +50,6 @@ Temporary Items
 
 ### Windows ###
 # Windows thumbnail cache files
-Thumbs.db
 Thumbs.db:encryptable
 ehthumbs.db
 ehthumbs_vista.db
@@ -101,17 +98,4 @@ $RECYCLE.BIN/
 # ignore work in progress files
 **/*.rewrite.sh
 **/*.refactor.sh
-
-### Go ###
-#
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-go.work
-
-#!! ERROR: nodejs is undefined. Use list command to see defined gitignore types !!#
 
