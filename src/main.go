@@ -1,20 +1,28 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
-	"github.com/casjay/timezones/src/database"
-	"github.com/casjay/timezones/src/paths"
-	"github.com/casjay/timezones/src/server"
-	"github.com/casjay/timezones/src/timezones"
+	"github.com/apimgr/timezones/src/config"
+	"github.com/apimgr/timezones/src/mode"
+	"github.com/apimgr/timezones/src/paths"
+	"github.com/apimgr/timezones/src/server"
+	"github.com/apimgr/timezones/src/timezones"
 )
 
 // Embed timezones JSON data
+//
 //go:embed data/timezones.json
 var timezonesJSON []byte
 
@@ -28,17 +36,41 @@ var (
 func main() {
 	// Command-line flags
 	var (
-		port         = flag.String("port", "", "Port to listen on (default: 8080)")
-		address      = flag.String("address", "", "Address to bind to (default: 0.0.0.0)")
-		configDir    = flag.String("config", "", "Configuration directory")
-		dataDir      = flag.String("data", "", "Data directory")
-		logsDir      = flag.String("logs", "", "Logs directory")
-		adminUser    = flag.String("admin-user", "", "Admin username (for first-time setup)")
-		adminPass    = flag.String("admin-password", "", "Admin password (for first-time setup)")
-		showVersion  = flag.Bool("version", false, "Show version information")
-		showStatus   = flag.Bool("status", false, "Show server status (for health checks)")
+		port            = flag.String("port", "", "Port to listen on")
+		address         = flag.String("address", "", "Address to bind to")
+		configDir       = flag.String("config", "", "Configuration directory")
+		dataDir         = flag.String("data", "", "Data directory")
+		logsDir         = flag.String("logs", "", "Logs directory")
+		showVersion     = flag.Bool("version", false, "Show version information")
+		showStatus      = flag.Bool("status", false, "Show server status (for health checks)")
+		showHelp        = flag.Bool("help", false, "Show help message")
+		serviceCmd      = flag.String("service", "", "Service command (install, uninstall, start, stop, restart, status)")
+		maintenanceMode = flag.String("maintenance", "", "Maintenance mode (on/off)")
+		modeFlag        = flag.String("mode", "", "Application mode (dev/development, prod/production)")
+		updateCmd       = flag.String("update", "", "Update command (stable, beta, nightly)")
 	)
 	flag.Parse()
+
+	// Show help
+	if *showHelp {
+		printHelp()
+		return
+	}
+
+	// Handle update command
+	if *updateCmd != "" {
+		handleUpdateCommand(*updateCmd)
+		return
+	}
+
+	// Initialize mode
+	if err := mode.Initialize(*modeFlag); err != nil {
+		log.Printf("Warning: invalid mode: %v", err)
+	}
+
+	// Unused vars to satisfy compiler
+	_ = dataDir
+	_ = logsDir
 
 	// Show version
 	if *showVersion {
@@ -51,6 +83,18 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Handle service commands
+	if *serviceCmd != "" {
+		handleServiceCommand(*serviceCmd)
+		return
+	}
+
+	// Handle maintenance mode
+	if *maintenanceMode != "" {
+		handleMaintenanceMode(*maintenanceMode)
+		return
+	}
+
 	log.Printf("Starting Timezones API v%s", Version)
 
 	// Determine directories
@@ -61,99 +105,20 @@ func main() {
 			*configDir = paths.GetConfigDir(appName)
 		}
 	}
-	if *dataDir == "" {
-		*dataDir = os.Getenv("DATA_DIR")
-		if *dataDir == "" {
-			*dataDir = paths.GetDataDir(appName)
-		}
-	}
-	if *logsDir == "" {
-		*logsDir = os.Getenv("LOGS_DIR")
-		if *logsDir == "" {
-			*logsDir = paths.GetLogsDir(appName)
-		}
-	}
 
 	// Ensure directories exist
 	if err := paths.EnsureDir(*configDir); err != nil {
 		log.Fatalf("Failed to create config directory: %v", err)
 	}
-	if err := paths.EnsureDir(*dataDir); err != nil {
-		log.Fatalf("Failed to create data directory: %v", err)
-	}
-	if err := paths.EnsureDir(filepath.Join(*dataDir, "db")); err != nil {
-		log.Fatalf("Failed to create database directory: %v", err)
-	}
-	if err := paths.EnsureDir(*logsDir); err != nil {
-		log.Fatalf("Failed to create logs directory: %v", err)
-	}
 
 	log.Printf("Config directory: %s", *configDir)
-	log.Printf("Data directory: %s", *dataDir)
-	log.Printf("Logs directory: %s", *logsDir)
 
-	// Initialize database
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = database.GetDBPath(*dataDir)
-	}
-
-	if err := database.Initialize(dbPath); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
-	}
-	defer database.Close()
-
-	// Check for admin user
-	adminExists, err := database.AdminUserExists()
+	// Load configuration (using server.yml per BASE.md)
+	configPath := filepath.Join(*configDir, "server.yml")
+	cfg, err := config.Load(configPath)
 	if err != nil {
-		log.Fatalf("Failed to check for admin user: %v", err)
-	}
-
-	// Create admin user if needed
-	if !adminExists {
-		username := *adminUser
-		password := *adminPass
-
-		// Check environment variables
-		if username == "" {
-			username = os.Getenv("ADMIN_USER")
-		}
-		if password == "" {
-			password = os.Getenv("ADMIN_PASSWORD")
-		}
-
-		// Use defaults if still not provided
-		if username == "" {
-			username = "administrator"
-		}
-		if password == "" {
-			password = "changeme"
-			log.Println("⚠️  WARNING: Using default admin password. Please change it!")
-		}
-
-		creds, err := database.CreateAdminUser(username, password)
-		if err != nil {
-			log.Fatalf("Failed to create admin user: %v", err)
-		}
-
-		log.Printf("✓ Admin user created: %s", username)
-
-		// Determine port for credentials file
-		portForCreds := *port
-		if portForCreds == "" {
-			portForCreds = os.Getenv("PORT")
-		}
-		if portForCreds == "" {
-			portForCreds = "8080"
-		}
-
-		// Save credentials to file (with password)
-		if err := database.SaveCredentialsToFile(creds, *configDir, portForCreds, password); err != nil {
-			log.Printf("⚠️  Failed to save credentials file: %v", err)
-		} else {
-			credPath := filepath.Join(*configDir, "credentials.txt")
-			log.Printf("✓ Credentials saved to: %s", credPath)
-		}
+		log.Printf("Warning: Failed to load config: %v (using defaults)", err)
+		cfg = config.DefaultConfig()
 	}
 
 	// Initialize timezones service with embedded JSON data
@@ -162,11 +127,14 @@ func main() {
 		log.Fatalf("Failed to initialize timezones service: %v", err)
 	}
 
-	log.Printf("✓ Loaded %d timezones", tzService.Count())
+	log.Printf("Loaded %d timezones", tzService.Count())
 
 	// Determine server configuration
 	if *port == "" {
 		*port = os.Getenv("PORT")
+		if *port == "" {
+			*port = cfg.Server.Port
+		}
 		if *port == "" {
 			*port = "8080"
 		}
@@ -174,13 +142,149 @@ func main() {
 	if *address == "" {
 		*address = os.Getenv("ADDRESS")
 		if *address == "" {
+			*address = cfg.Server.Address
+		}
+		if *address == "" {
 			*address = "0.0.0.0"
 		}
 	}
 
-	// Start HTTP server
-	srv := server.New(tzService, *address, *port, Version, BuildDate, Commit)
-	if err := srv.Start(); err != nil {
-		log.Fatalf("Server error: %v", err)
+	// Create HTTP server
+	srv := server.New(tzService, cfg, *address, *port, Version, BuildDate, Commit)
+
+	// Setup graceful shutdown
+	httpServer := &http.Server{
+		Addr:         fmt.Sprintf("%s:%s", *address, *port),
+		Handler:      srv.Router(),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	// Start server in goroutine
+	go func() {
+		log.Printf("Server listening on %s:%s", *address, *port)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	// Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server stopped")
+}
+
+// handleServiceCommand handles service management commands
+func handleServiceCommand(cmd string) {
+	switch cmd {
+	case "install":
+		fmt.Println("Service installation not yet implemented")
+		fmt.Println("Use systemd/launchd/rc.d to manage the service")
+	case "uninstall":
+		fmt.Println("Service uninstallation not yet implemented")
+	case "start":
+		fmt.Println("Use 'systemctl start timezones' or run the binary directly")
+	case "stop":
+		fmt.Println("Use 'systemctl stop timezones' or send SIGTERM to the process")
+	case "restart":
+		fmt.Println("Use 'systemctl restart timezones'")
+	case "status":
+		fmt.Println("Use 'systemctl status timezones' or --status flag")
+	default:
+		fmt.Printf("Unknown service command: %s\n", cmd)
+		fmt.Println("Available commands: install, uninstall, start, stop, restart, status")
+	}
+}
+
+// handleMaintenanceMode handles maintenance mode toggle
+func handleMaintenanceMode(m string) {
+	switch m {
+	case "on":
+		fmt.Println("Maintenance mode: ON")
+		fmt.Println("Note: Maintenance mode is handled at runtime, not persisted")
+	case "off":
+		fmt.Println("Maintenance mode: OFF")
+	default:
+		fmt.Printf("Invalid maintenance mode: %s (use 'on' or 'off')\n", m)
+	}
+}
+
+func printHelp() {
+	fmt.Printf(`Timezones API v%s
+
+Usage: timezones [options]
+
+Options:
+  --port PORT        Port to listen on (default: 8080)
+  --address ADDR     Address to bind to (default: 0.0.0.0)
+  --config PATH      Configuration directory
+  --data PATH        Data directory
+  --logs PATH        Logs directory
+  --mode MODE        Application mode (dev, prod)
+  --update BRANCH    Update from branch (stable, beta, nightly)
+  --version          Show version information
+  --status           Show server status
+  --help             Show this help message
+
+Service Management:
+  --service install    Install as system service
+  --service uninstall  Uninstall system service
+  --service start      Start the service
+  --service stop       Stop the service
+  --service restart    Restart the service
+  --service status     Show service status
+
+Maintenance:
+  --maintenance on     Enable maintenance mode
+  --maintenance off    Disable maintenance mode
+
+Examples:
+  timezones --port 3000
+  timezones --mode dev --port 8080
+  timezones --update stable
+`, Version)
+}
+
+func handleUpdateCommand(branch string) {
+	validBranches := map[string]bool{
+		"stable":  true,
+		"beta":    true,
+		"nightly": true,
+	}
+
+	if !validBranches[branch] {
+		fmt.Printf("Error: invalid update branch %q (valid: stable, beta, nightly)\n", branch)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Updating Timezones API from %s branch...\n", branch)
+
+	if _, err := exec.LookPath("git"); err != nil {
+		fmt.Println("Error: git is not installed")
+		os.Exit(1)
+	}
+
+	cmd := exec.Command("git", "pull", "origin", branch)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Update failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Update complete. Please rebuild the application.")
 }

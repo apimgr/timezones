@@ -1,33 +1,35 @@
 package server
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"time"
 
-	"github.com/casjay/timezones/src/security"
-	"github.com/casjay/timezones/src/timezones"
+	"github.com/apimgr/timezones/src/admin"
+	"github.com/apimgr/timezones/src/config"
+	"github.com/apimgr/timezones/src/timezones"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 // Server represents the HTTP server
 type Server struct {
-	router    *chi.Mux
-	tzService *timezones.Service
-	address   string
-	port      string
-	version   string
-	buildDate string
-	commit    string
+	router       *chi.Mux
+	tzService    *timezones.Service
+	config       *config.Config
+	adminHandler *admin.Handler
+	address      string
+	port         string
+	version      string
+	buildDate    string
+	commit       string
 }
 
 // New creates a new HTTP server
-func New(tzService *timezones.Service, address, port, version, buildDate, commit string) *Server {
+func New(tzService *timezones.Service, cfg *config.Config, address, port, version, buildDate, commit string) *Server {
 	s := &Server{
 		router:    chi.NewRouter(),
 		tzService: tzService,
+		config:    cfg,
 		address:   address,
 		port:      port,
 		version:   version,
@@ -35,9 +37,26 @@ func New(tzService *timezones.Service, address, port, version, buildDate, commit
 		commit:    commit,
 	}
 
+	// Initialize admin handler
+	s.adminHandler = admin.NewHandler(
+		cfg.Server.Admin.Username,
+		cfg.Server.Admin.Password,
+		cfg.Server.Admin.APIToken,
+		cfg.Server.Session.Timeout,
+		false, // SSL enabled
+		version,
+		commit,
+		buildDate,
+	)
+
 	s.setupMiddleware()
 	s.setupRoutes()
 	return s
+}
+
+// Router returns the chi router
+func (s *Server) Router() *chi.Mux {
+	return s.router
 }
 
 // setupMiddleware configures global middleware
@@ -60,18 +79,18 @@ func (s *Server) setupMiddleware() {
 	// Throttle concurrent requests
 	s.router.Use(middleware.Throttle(1000))
 
-	// Global rate limiting
-	s.router.Use(security.GlobalRateLimiter())
-
-	// Security headers
-	s.router.Use(security.SecurityHeadersMiddleware)
-
 	// CORS
 	s.router.Use(s.corsMiddleware)
+
+	// Security headers
+	s.router.Use(s.securityHeadersMiddleware)
 }
 
 // setupRoutes configures all HTTP routes
 func (s *Server) setupRoutes() {
+	// Register admin routes
+	s.adminHandler.RegisterRoutes(s.router)
+
 	// Static files
 	fileServer := http.FileServer(http.FS(staticFS))
 	s.router.Handle("/static/*", http.StripPrefix("/static/", fileServer))
@@ -79,14 +98,19 @@ func (s *Server) setupRoutes() {
 	// Public routes
 	s.router.Get("/", s.handleHome)
 	s.router.Get("/healthz", s.handleHealth)
+	s.router.Get("/health", s.handleHealth)
 	s.router.Get("/status", s.handleHealth)
+
+	// PWA support
+	s.router.Get("/manifest.json", s.handleManifest)
+	s.router.Get("/sw.js", s.handleServiceWorker)
+	s.router.Get("/robots.txt", s.handleRobotsTxt)
+	s.router.Get("/security.txt", s.handleSecurityTxt)
+	s.router.Get("/.well-known/security.txt", s.handleSecurityTxt)
 
 	// API v1 routes
 	s.router.Route("/api/v1", func(r chi.Router) {
-		// Apply API rate limiting
-		r.Use(security.APIRateLimiter())
-
-		// Timezone endpoints
+		// Timezone endpoints - JSON
 		r.Get("/timezones.json", s.handleTimezonesJSON)
 		r.Get("/timezones", s.handleTimezonesAll)
 		r.Get("/timezones/search", s.handleTimezonesSearch)
@@ -94,46 +118,31 @@ func (s *Server) setupRoutes() {
 		r.Get("/timezones/abbr/{abbr}", s.handleTimezonesByAbbr)
 		r.Get("/timezones/utc/{utc}", s.handleTimezonesByUTC)
 		r.Get("/timezones/value/{value}", s.handleTimezoneByValue)
+		r.Get("/timezones/random", s.handleTimezonesRandom)
+
+		// Timezone endpoints - Plain text (.txt)
+		r.Get("/timezones.txt", s.handleTimezonesAllTxt)
+		r.Get("/timezones/search.txt", s.handleTimezonesSearchTxt)
+		r.Get("/timezones/random.txt", s.handleTimezonesRandomTxt)
 
 		// Stats & health
 		r.Get("/stats", s.handleStats)
+		r.Get("/stats.txt", s.handleStatsTxt)
 		r.Get("/health", s.handleHealth)
-
-		// Admin routes (protected)
-		r.Group(func(r chi.Router) {
-			r.Use(security.AdminRateLimiter())
-			r.Use(s.authMiddleware)
-
-			r.Get("/admin/settings", s.handleAdminSettings)
-			r.Post("/admin/settings", s.handleAdminSettings)
-			r.Delete("/admin/settings/{key}", s.handleAdminSettingDelete)
-		})
+		r.Get("/count", s.handleCount)
+		r.Get("/count.txt", s.handleCountTxt)
 	})
-}
 
-// Start starts the HTTP server
-func (s *Server) Start() error {
-	addr := fmt.Sprintf("%s:%s", s.address, s.port)
-
-	srv := &http.Server{
-		Addr:           addr,
-		Handler:        s.router,
-		ReadTimeout:    15 * time.Second,
-		WriteTimeout:   15 * time.Second,
-		IdleTimeout:    60 * time.Second,
-		MaxHeaderBytes: 1 << 20, // 1MB
-	}
-
-	log.Printf("Starting server on %s", addr)
-	log.Printf("Version: %s (built on %s, commit %s)", s.version, s.buildDate, s.commit)
-
-	return srv.ListenAndServe()
+	// Shorthand routes
+	s.router.Get("/random", s.handleTimezonesRandom)
+	s.router.Get("/random.txt", s.handleTimezonesRandomTxt)
 }
 
 // corsMiddleware adds CORS headers
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		cors := config.GetCORS()
+		w.Header().Set("Access-Control-Allow-Origin", cors)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
@@ -142,6 +151,17 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+// securityHeadersMiddleware adds security headers
+func (s *Server) securityHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		next.ServeHTTP(w, r)
 	})
 }

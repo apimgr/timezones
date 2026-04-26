@@ -6,6 +6,13 @@ import (
 	"runtime"
 )
 
+const (
+	// OrgName is the organization name used for directory structure
+	OrgName = "apimgr"
+	// ProjectName is the name of this project
+	ProjectName = "timezones"
+)
+
 // GetConfigDir returns the OS-specific configuration directory
 func GetConfigDir(appName string) string {
 	// Check environment variable first
@@ -17,30 +24,30 @@ func GetConfigDir(appName string) string {
 
 	switch runtime.GOOS {
 	case "windows":
-		// Windows: %APPDATA%\AppName
+		// Windows: %APPDATA%\OrgName\AppName
 		baseDir = os.Getenv("APPDATA")
 		if baseDir == "" {
 			baseDir = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Roaming")
 		}
-		return filepath.Join(baseDir, capitalize(appName))
+		return filepath.Join(baseDir, capitalize(OrgName), capitalize(appName))
 
 	case "darwin":
-		// macOS: ~/Library/Application Support/AppName
+		// macOS: ~/Library/Application Support/OrgName/AppName
 		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, "Library", "Application Support", capitalize(appName))
+		return filepath.Join(homeDir, "Library", "Application Support", capitalize(OrgName), capitalize(appName))
 
 	default:
 		// Linux/Unix: Check if running as root
 		if os.Geteuid() == 0 {
-			// Root user: /etc/appname
-			return filepath.Join("/etc", appName)
+			// Root user: /etc/orgname/appname
+			return filepath.Join("/etc", OrgName, appName)
 		}
-		// Regular user: ~/.config/appname
+		// Regular user: ~/.config/orgname/appname
 		if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
-			return filepath.Join(xdgConfig, appName)
+			return filepath.Join(xdgConfig, OrgName, appName)
 		}
 		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, ".config", appName)
+		return filepath.Join(homeDir, ".config", OrgName, appName)
 	}
 }
 
@@ -55,30 +62,30 @@ func GetDataDir(appName string) string {
 
 	switch runtime.GOOS {
 	case "windows":
-		// Windows: %LOCALAPPDATA%\AppName
+		// Windows: %LOCALAPPDATA%\OrgName\AppName
 		baseDir = os.Getenv("LOCALAPPDATA")
 		if baseDir == "" {
 			baseDir = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
 		}
-		return filepath.Join(baseDir, capitalize(appName))
+		return filepath.Join(baseDir, capitalize(OrgName), capitalize(appName))
 
 	case "darwin":
-		// macOS: ~/Library/Application Support/AppName
+		// macOS: ~/Library/Application Support/OrgName/AppName
 		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, "Library", "Application Support", capitalize(appName))
+		return filepath.Join(homeDir, "Library", "Application Support", capitalize(OrgName), capitalize(appName))
 
 	default:
 		// Linux/Unix: Check if running as root
 		if os.Geteuid() == 0 {
-			// Root user: /var/lib/appname
-			return filepath.Join("/var/lib", appName)
+			// Root user: /var/lib/orgname/appname
+			return filepath.Join("/var/lib", OrgName, appName)
 		}
-		// Regular user: ~/.local/share/appname
+		// Regular user: ~/.local/share/orgname/appname
 		if xdgData := os.Getenv("XDG_DATA_HOME"); xdgData != "" {
-			return filepath.Join(xdgData, appName)
+			return filepath.Join(xdgData, OrgName, appName)
 		}
 		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, ".local", "share", appName)
+		return filepath.Join(homeDir, ".local", "share", OrgName, appName)
 	}
 }
 
@@ -91,21 +98,21 @@ func GetLogsDir(appName string) string {
 
 	switch runtime.GOOS {
 	case "windows":
-		// Windows: %LOCALAPPDATA%\AppName\logs
+		// Windows: %LOCALAPPDATA%\OrgName\AppName\logs
 		return filepath.Join(GetDataDir(appName), "logs")
 
 	case "darwin":
-		// macOS: ~/Library/Logs/AppName
+		// macOS: ~/Library/Logs/OrgName/AppName
 		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, "Library", "Logs", capitalize(appName))
+		return filepath.Join(homeDir, "Library", "Logs", capitalize(OrgName), capitalize(appName))
 
 	default:
 		// Linux/Unix: Check if running as root
 		if os.Geteuid() == 0 {
-			// Root user: /var/log/appname
-			return filepath.Join("/var/log", appName)
+			// Root user: /var/log/orgname/appname
+			return filepath.Join("/var/log", OrgName, appName)
 		}
-		// Regular user: ~/.local/share/appname/logs
+		// Regular user: ~/.local/share/orgname/appname/logs
 		return filepath.Join(GetDataDir(appName), "logs")
 	}
 }
