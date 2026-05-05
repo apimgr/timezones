@@ -78,9 +78,9 @@ services:
       - ADMIN_USER=administrator
       - ADMIN_PASSWORD=changeme
     volumes:
-      - ./rootfs/config/timezones:/config
-      - ./rootfs/data/timezones:/data
-      - ./rootfs/logs/timezones:/logs
+      - ./volumes/config/timezones:/config
+      - ./volumes/data/timezones:/data
+      - ./volumes/logs/timezones:/logs
     ports:
       - "172.17.0.1:64180:80"
 ```
@@ -266,7 +266,7 @@ curl http://localhost:64181/api/v1/timezones
 
 # Cleanup
 docker-compose -f docker-compose.test.yml down
-sudo rm -rf /tmp/timezones/rootfs
+sudo rm -rf /tmp/timezones/volumes
 ```
 
 ### CI/CD
