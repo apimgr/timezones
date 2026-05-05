@@ -20,9 +20,9 @@ services:
       - DEV=true
 
     volumes:
-      - /tmp/timezones/rootfs/config/timezones:/config
-      - /tmp/timezones/rootfs/data/timezones:/data
-      - /tmp/timezones/rootfs/logs/timezones:/logs
+      - /tmp/timezones/volumes/config/timezones:/config
+      - /tmp/timezones/volumes/data/timezones:/data
+      - /tmp/timezones/volumes/logs/timezones:/logs
 
     ports:
       - "64181:80"
