@@ -1,0 +1,107 @@
+{{define "content"}}
+<div class="hero">
+    <h1>🌍 Timezones API</h1>
+    <p class="subtitle">Comprehensive timezone data with UTC offsets, DST information, and regional identifiers</p>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{.TotalCount}}</div>
+            <div class="stat-label">Timezones</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{.Version}}</div>
+            <div class="stat-label">Version</div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>API Endpoints</h2>
+    <div class="endpoints-grid">
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/timezones.json</div>
+            <div class="endpoint-desc">Get raw JSON timezone data</div>
+        </div>
+
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/timezones</div>
+            <div class="endpoint-desc">Get all timezones (JSON API response)</div>
+        </div>
+
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/timezones/search?q={query}</div>
+            <div class="endpoint-desc">Search timezones by text</div>
+        </div>
+
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/timezones/offset/{offset}</div>
+            <div class="endpoint-desc">Get timezones by UTC offset (-5, 0, +8, etc.)</div>
+        </div>
+
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/timezones/abbr/{abbr}</div>
+            <div class="endpoint-desc">Get timezones by abbreviation (EST, PST, etc.)</div>
+        </div>
+
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/timezones/utc/{utc}</div>
+            <div class="endpoint-desc">Get timezone by UTC identifier (America/New_York)</div>
+        </div>
+
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/timezones/value/{value}</div>
+            <div class="endpoint-desc">Get timezone by value (Eastern Standard Time)</div>
+        </div>
+
+        <div class="endpoint-card">
+            <div class="endpoint-method">GET</div>
+            <div class="endpoint-path">/api/v1/stats</div>
+            <div class="endpoint-desc">Get timezone statistics</div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Quick Examples</h2>
+    <div class="code-examples">
+        <div class="code-block">
+            <div class="code-title">Get all timezones</div>
+            <pre><code>curl http://localhost:8080/api/v1/timezones</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-title">Search for "pacific"</div>
+            <pre><code>curl http://localhost:8080/api/v1/timezones/search?q=pacific</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-title">Get timezones with offset -5 (EST)</div>
+            <pre><code>curl http://localhost:8080/api/v1/timezones/offset/-5</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-title">Get timezone for America/New_York</div>
+            <pre><code>curl http://localhost:8080/api/v1/timezones/utc/America/New_York</code></pre>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Data Format</h2>
+    <p>Each timezone entry contains:</p>
+    <ul class="feature-list">
+        <li><strong>value</strong> - Timezone name (e.g., "Eastern Standard Time")</li>
+        <li><strong>abbr</strong> - Abbreviation (e.g., "EST", "PST")</li>
+        <li><strong>offset</strong> - UTC offset in hours (e.g., -5, 0, +8)</li>
+        <li><strong>isdst</strong> - Whether DST is active (boolean)</li>
+        <li><strong>text</strong> - Human-readable description</li>
+        <li><strong>utc</strong> - Array of IANA timezone identifiers</li>
+    </ul>
+</div>
+{{end}}

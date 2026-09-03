@@ -1,0 +1,44 @@
+# Production Docker Compose Configuration
+# Uses ./volumes for persistent storage
+# External port: 172.17.0.1:64180:80 (Docker bridge network)
+
+services:
+  timezones:
+    image: ghcr.io/casjay/timezones:latest
+    container_name: timezones
+    restart: unless-stopped
+
+    environment:
+      - CONFIG_DIR=/config
+      - DATA_DIR=/data
+      - LOGS_DIR=/logs
+      - PORT=80
+      - ADDRESS=0.0.0.0
+      - DB_PATH=/data/db/timezones.db
+      # Uncomment and set for first deployment
+      #- ADMIN_USER=administrator
+      #- ADMIN_PASSWORD=changeme
+
+    volumes:
+      - ./volumes/config/timezones:/config
+      - ./volumes/data/timezones:/data
+      - ./volumes/logs/timezones:/logs
+
+    ports:
+      - "172.17.0.1:64180:80"
+
+    networks:
+      - timezones
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/timezones", "--status"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  timezones:
+    name: timezones
+    external: false
+    driver: bridge
