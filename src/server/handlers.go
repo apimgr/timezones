@@ -5,17 +5,13 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/apimgr/timezones/src/config"
 	"github.com/go-chi/chi/v5"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 // APIResponse represents a standardized API response
 type APIResponse struct {
@@ -41,7 +37,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		"Theme":      config.GetTheme(),
 	}
 
-	if err := renderTemplate(w, "home.html", data); err != nil {
+	if err := renderTemplate(w, "base.html", data); err != nil {
 		http.Error(w, "Failed to render template", http.StatusInternalServerError)
 		return
 	}
@@ -144,7 +140,14 @@ func (s *Server) handleTimezonesByAbbr(w http.ResponseWriter, r *http.Request) {
 
 // handleTimezonesByUTC returns timezone by UTC identifier
 func (s *Server) handleTimezonesByUTC(w http.ResponseWriter, r *http.Request) {
-	utc := chi.URLParam(r, "utc")
+	// Chi routes on r.URL.RawPath (still percent-encoded) whenever it is
+	// set, so the "*" wildcard param comes back percent-encoded too (e.g.
+	// "America%2FNew_York" for a request to .../utc/America%2FNew_York).
+	// Decode it before lookup so slash-containing IANA identifiers match.
+	utc := chi.URLParam(r, "*")
+	if decoded, err := url.PathUnescape(utc); err == nil {
+		utc = decoded
+	}
 
 	result := s.tzService.GetByUTC(utc)
 	if result == nil {

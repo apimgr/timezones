@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/apimgr/timezones/src/admin"
 	"github.com/apimgr/timezones/src/config"
 	"github.com/apimgr/timezones/src/timezones"
 	"github.com/go-chi/chi/v5"
@@ -16,7 +15,6 @@ type Server struct {
 	router       *chi.Mux
 	tzService    *timezones.Service
 	config       *config.Config
-	adminHandler *admin.Handler
 	address      string
 	port         string
 	version      string
@@ -36,18 +34,6 @@ func New(tzService *timezones.Service, cfg *config.Config, address, port, versio
 		buildDate: buildDate,
 		commit:    commit,
 	}
-
-	// Initialize admin handler
-	s.adminHandler = admin.NewHandler(
-		cfg.Server.Admin.Username,
-		cfg.Server.Admin.Password,
-		cfg.Server.Admin.APIToken,
-		cfg.Server.Session.Timeout,
-		false, // SSL enabled
-		version,
-		commit,
-		buildDate,
-	)
 
 	s.setupMiddleware()
 	s.setupRoutes()
@@ -88,9 +74,6 @@ func (s *Server) setupMiddleware() {
 
 // setupRoutes configures all HTTP routes
 func (s *Server) setupRoutes() {
-	// Register admin routes
-	s.adminHandler.RegisterRoutes(s.router)
-
 	// Static files
 	fileServer := http.FileServer(http.FS(staticFS))
 	s.router.Handle("/static/*", http.StripPrefix("/static/", fileServer))
@@ -116,7 +99,10 @@ func (s *Server) setupRoutes() {
 		r.Get("/timezones/search", s.handleTimezonesSearch)
 		r.Get("/timezones/offset/{offset}", s.handleTimezonesByOffset)
 		r.Get("/timezones/abbr/{abbr}", s.handleTimezonesByAbbr)
-		r.Get("/timezones/utc/{utc}", s.handleTimezonesByUTC)
+		// Wildcard "*" rather than {utc}: IANA identifiers like
+		// "America/New_York" contain slashes, which decode into extra path
+		// segments a single-segment chi param can never match.
+		r.Get("/timezones/utc/*", s.handleTimezonesByUTC)
 		r.Get("/timezones/value/{value}", s.handleTimezoneByValue)
 		r.Get("/timezones/random", s.handleTimezonesRandom)
 

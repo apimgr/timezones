@@ -7,8 +7,6 @@ import (
 	"sync"
 )
 
-const appName = "timezones"
-
 // Mode represents the application mode
 type Mode string
 

@@ -17,7 +17,7 @@ RUN go mod download
 # Copy source and build
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
-    -ldflags "-s -w -X 'main.Version=${VERSION}' -X 'main.CommitID=${VCS_REF}' -X 'main.BuildDate=${BUILD_DATE}'" \
+    -ldflags "-s -w -X 'main.Version=${VERSION}' -X 'main.Commit=${VCS_REF}' -X 'main.BuildDate=${BUILD_DATE}'" \
     -o /app ./src
 
 # =============================================================================

@@ -14,6 +14,45 @@ const (
 	orgName = "apimgr"
 )
 
+var (
+	// runCommand executes an external command. Overridable in tests to
+	// avoid invoking real system service managers (systemctl, sv,
+	// launchctl, sc.exe, service) while still exercising the call sites.
+	runCommand = func(name string, args ...string) error {
+		return exec.Command(name, args...).Run()
+	}
+	// sysRoot is prefixed onto every absolute system path this package
+	// writes to or reads from. Empty by default, which preserves the
+	// original hardcoded-path behavior exactly; overridable in tests via
+	// t.TempDir() so install/uninstall logic can be exercised without
+	// touching the real filesystem.
+	sysRoot = ""
+	// detectFn resolves the active service manager. Defaults to
+	// DetectServiceManager and is overridable in tests so each dispatch
+	// branch in Install/Uninstall/Start/Stop/Restart/Reload can be
+	// exercised deterministically regardless of the host environment.
+	detectFn = DetectServiceManager
+)
+
+// withRoot prefixes an absolute path with sysRoot, returned unchanged when
+// sysRoot is empty (the default, production behavior).
+func withRoot(path string) string {
+	if sysRoot == "" {
+		return path
+	}
+	return filepath.Join(sysRoot, path)
+}
+
+// titleCase capitalizes the first letter of s, leaving the rest unchanged.
+// A minimal replacement for the deprecated strings.Title, sufficient for
+// the single ASCII literal (appName) it is used with here.
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
 // ServiceType represents the type of service manager
 type ServiceType int
 
@@ -60,7 +99,7 @@ func DetectServiceManager() ServiceType {
 
 // Install installs the service for the detected service manager
 func Install() error {
-	serviceType := DetectServiceManager()
+	serviceType := detectFn()
 
 	switch serviceType {
 	case ServiceSystemd:
@@ -80,7 +119,7 @@ func Install() error {
 
 // Uninstall removes the service
 func Uninstall() error {
-	serviceType := DetectServiceManager()
+	serviceType := detectFn()
 
 	switch serviceType {
 	case ServiceSystemd:
@@ -102,9 +141,9 @@ func Uninstall() error {
 func GetBinaryPath() string {
 	switch runtime.GOOS {
 	case "windows":
-		return fmt.Sprintf(`C:\Program Files\%s\%s\%s.exe`, orgName, appName, appName)
+		return withRoot(fmt.Sprintf(`C:\Program Files\%s\%s\%s.exe`, orgName, appName, appName))
 	default:
-		return fmt.Sprintf("/usr/local/bin/%s", appName)
+		return withRoot(fmt.Sprintf("/usr/local/bin/%s", appName))
 	}
 }
 
@@ -139,13 +178,13 @@ ReadWritePaths=/var/lib/%s/%s /var/log/%s/%s /etc/%s/%s
 WantedBy=multi-user.target
 `, binaryPath, orgName, appName, orgName, appName, orgName, appName)
 
-	servicePath := fmt.Sprintf("/etc/systemd/system/%s.service", appName)
+	servicePath := withRoot(fmt.Sprintf("/etc/systemd/system/%s.service", appName))
 
 	// Create directories
 	dirs := []string{
-		fmt.Sprintf("/var/lib/%s/%s", orgName, appName),
-		fmt.Sprintf("/var/log/%s/%s", orgName, appName),
-		fmt.Sprintf("/etc/%s/%s", orgName, appName),
+		withRoot(fmt.Sprintf("/var/lib/%s/%s", orgName, appName)),
+		withRoot(fmt.Sprintf("/var/log/%s/%s", orgName, appName)),
+		withRoot(fmt.Sprintf("/etc/%s/%s", orgName, appName)),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -166,12 +205,12 @@ WantedBy=multi-user.target
 	}
 
 	// Reload systemd
-	if err := exec.Command("systemctl", "daemon-reload").Run(); err != nil {
+	if err := runCommand("systemctl", "daemon-reload"); err != nil {
 		return fmt.Errorf("failed to reload systemd: %w", err)
 	}
 
 	// Enable service
-	if err := exec.Command("systemctl", "enable", appName).Run(); err != nil {
+	if err := runCommand("systemctl", "enable", appName); err != nil {
 		return fmt.Errorf("failed to enable service: %w", err)
 	}
 
@@ -189,13 +228,13 @@ WantedBy=multi-user.target
 
 // uninstallSystemd removes systemd service
 func uninstallSystemd() error {
-	servicePath := fmt.Sprintf("/etc/systemd/system/%s.service", appName)
+	servicePath := withRoot(fmt.Sprintf("/etc/systemd/system/%s.service", appName))
 
 	// Stop service if running
-	exec.Command("systemctl", "stop", appName).Run()
+	runCommand("systemctl", "stop", appName)
 
 	// Disable service
-	exec.Command("systemctl", "disable", appName).Run()
+	runCommand("systemctl", "disable", appName)
 
 	// Remove service file
 	if err := os.Remove(servicePath); err != nil && !os.IsNotExist(err) {
@@ -203,7 +242,7 @@ func uninstallSystemd() error {
 	}
 
 	// Reload systemd
-	exec.Command("systemctl", "daemon-reload").Run()
+	runCommand("systemctl", "daemon-reload")
 
 	fmt.Printf("✅ Service uninstalled: %s\n", servicePath)
 	return nil
@@ -211,7 +250,7 @@ func uninstallSystemd() error {
 
 // installRunit creates runit service
 func installRunit() error {
-	svDir := fmt.Sprintf("/etc/sv/%s", appName)
+	svDir := withRoot(fmt.Sprintf("/etc/sv/%s", appName))
 	binaryPath := GetBinaryPath()
 
 	// Create service directory
@@ -243,7 +282,7 @@ exec svlogd -tt ./main
 	}
 
 	// Link to service directory
-	linkPath := fmt.Sprintf("/var/service/%s", appName)
+	linkPath := withRoot(fmt.Sprintf("/var/service/%s", appName))
 	os.Symlink(svDir, linkPath)
 
 	fmt.Printf("✅ Runit service installed at: %s\n", svDir)
@@ -252,11 +291,11 @@ exec svlogd -tt ./main
 
 // uninstallRunit removes runit service
 func uninstallRunit() error {
-	svDir := fmt.Sprintf("/etc/sv/%s", appName)
-	linkPath := fmt.Sprintf("/var/service/%s", appName)
+	svDir := withRoot(fmt.Sprintf("/etc/sv/%s", appName))
+	linkPath := withRoot(fmt.Sprintf("/var/service/%s", appName))
 
 	// Stop service
-	exec.Command("sv", "stop", appName).Run()
+	runCommand("sv", "stop", appName)
 
 	// Remove link
 	os.Remove(linkPath)
@@ -271,7 +310,7 @@ func uninstallRunit() error {
 // installLaunchd creates macOS launchd plist
 func installLaunchd() error {
 	binaryPath := GetBinaryPath()
-	plistPath := fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName)
+	plistPath := withRoot(fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName))
 
 	plistContent := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -297,8 +336,8 @@ func installLaunchd() error {
 
 	// Create directories
 	dirs := []string{
-		fmt.Sprintf("/Library/Application Support/%s/%s", orgName, appName),
-		fmt.Sprintf("/Library/Logs/%s/%s", orgName, appName),
+		withRoot(fmt.Sprintf("/Library/Application Support/%s/%s", orgName, appName)),
+		withRoot(fmt.Sprintf("/Library/Logs/%s/%s", orgName, appName)),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -328,10 +367,10 @@ func installLaunchd() error {
 
 // uninstallLaunchd removes macOS launchd plist
 func uninstallLaunchd() error {
-	plistPath := fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName)
+	plistPath := withRoot(fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName))
 
 	// Unload if running
-	exec.Command("launchctl", "unload", plistPath).Run()
+	runCommand("launchctl", "unload", plistPath)
 
 	// Remove plist
 	if err := os.Remove(plistPath); err != nil && !os.IsNotExist(err) {
@@ -359,13 +398,11 @@ func installWindows() error {
 	}
 
 	// Create service using sc.exe
-	displayName := strings.Title(appName) + " API"
-	cmd := exec.Command("sc.exe", "create", appName,
+	displayName := titleCase(appName) + " API"
+	if err := runCommand("sc.exe", "create", appName,
 		"binPath=", binaryPath,
 		"DisplayName=", displayName,
-		"start=", "auto")
-
-	if err := cmd.Run(); err != nil {
+		"start=", "auto"); err != nil {
 		return fmt.Errorf("failed to create Windows service: %w", err)
 	}
 
@@ -380,10 +417,10 @@ func installWindows() error {
 // uninstallWindows removes Windows service
 func uninstallWindows() error {
 	// Stop service
-	exec.Command("sc.exe", "stop", appName).Run()
+	runCommand("sc.exe", "stop", appName)
 
 	// Delete service
-	if err := exec.Command("sc.exe", "delete", appName).Run(); err != nil {
+	if err := runCommand("sc.exe", "delete", appName); err != nil {
 		return fmt.Errorf("failed to delete Windows service: %w", err)
 	}
 
@@ -394,7 +431,7 @@ func uninstallWindows() error {
 // installBSDRC creates BSD rc.d script
 func installBSDRC() error {
 	binaryPath := GetBinaryPath()
-	rcPath := fmt.Sprintf("/usr/local/etc/rc.d/%s", appName)
+	rcPath := withRoot(fmt.Sprintf("/usr/local/etc/rc.d/%s", appName))
 
 	rcContent := fmt.Sprintf(`#!/bin/sh
 
@@ -438,10 +475,10 @@ run_rc_command "$1"
 
 // uninstallBSDRC removes BSD rc.d script
 func uninstallBSDRC() error {
-	rcPath := fmt.Sprintf("/usr/local/etc/rc.d/%s", appName)
+	rcPath := withRoot(fmt.Sprintf("/usr/local/etc/rc.d/%s", appName))
 
 	// Stop service
-	exec.Command("service", appName, "stop").Run()
+	runCommand("service", appName, "stop")
 
 	// Remove script
 	if err := os.Remove(rcPath); err != nil && !os.IsNotExist(err) {
@@ -475,20 +512,20 @@ func copyBinary(src, dst string) error {
 
 // Start starts the service
 func Start() error {
-	serviceType := DetectServiceManager()
+	serviceType := detectFn()
 
 	switch serviceType {
 	case ServiceSystemd:
-		return exec.Command("systemctl", "start", appName).Run()
+		return runCommand("systemctl", "start", appName)
 	case ServiceRunit:
-		return exec.Command("sv", "start", appName).Run()
+		return runCommand("sv", "start", appName)
 	case ServiceLaunchd:
-		plistPath := fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName)
-		return exec.Command("launchctl", "load", plistPath).Run()
+		plistPath := withRoot(fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName))
+		return runCommand("launchctl", "load", plistPath)
 	case ServiceWindows:
-		return exec.Command("sc.exe", "start", appName).Run()
+		return runCommand("sc.exe", "start", appName)
 	case ServiceBSDRC:
-		return exec.Command("service", appName, "start").Run()
+		return runCommand("service", appName, "start")
 	default:
 		return fmt.Errorf("unsupported service manager")
 	}
@@ -496,20 +533,20 @@ func Start() error {
 
 // Stop stops the service
 func Stop() error {
-	serviceType := DetectServiceManager()
+	serviceType := detectFn()
 
 	switch serviceType {
 	case ServiceSystemd:
-		return exec.Command("systemctl", "stop", appName).Run()
+		return runCommand("systemctl", "stop", appName)
 	case ServiceRunit:
-		return exec.Command("sv", "stop", appName).Run()
+		return runCommand("sv", "stop", appName)
 	case ServiceLaunchd:
-		plistPath := fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName)
-		return exec.Command("launchctl", "unload", plistPath).Run()
+		plistPath := withRoot(fmt.Sprintf("/Library/LaunchDaemons/com.%s.%s.plist", orgName, appName))
+		return runCommand("launchctl", "unload", plistPath)
 	case ServiceWindows:
-		return exec.Command("sc.exe", "stop", appName).Run()
+		return runCommand("sc.exe", "stop", appName)
 	case ServiceBSDRC:
-		return exec.Command("service", appName, "stop").Run()
+		return runCommand("service", appName, "stop")
 	default:
 		return fmt.Errorf("unsupported service manager")
 	}
@@ -517,21 +554,21 @@ func Stop() error {
 
 // Restart restarts the service
 func Restart() error {
-	serviceType := DetectServiceManager()
+	serviceType := detectFn()
 
 	switch serviceType {
 	case ServiceSystemd:
-		return exec.Command("systemctl", "restart", appName).Run()
+		return runCommand("systemctl", "restart", appName)
 	case ServiceRunit:
-		return exec.Command("sv", "restart", appName).Run()
+		return runCommand("sv", "restart", appName)
 	case ServiceLaunchd:
 		Stop()
 		return Start()
 	case ServiceWindows:
-		exec.Command("sc.exe", "stop", appName).Run()
-		return exec.Command("sc.exe", "start", appName).Run()
+		runCommand("sc.exe", "stop", appName)
+		return runCommand("sc.exe", "start", appName)
 	case ServiceBSDRC:
-		return exec.Command("service", appName, "restart").Run()
+		return runCommand("service", appName, "restart")
 	default:
 		return fmt.Errorf("unsupported service manager")
 	}
@@ -539,13 +576,13 @@ func Restart() error {
 
 // Reload sends reload signal to the service
 func Reload() error {
-	serviceType := DetectServiceManager()
+	serviceType := detectFn()
 
 	switch serviceType {
 	case ServiceSystemd:
-		return exec.Command("systemctl", "reload", appName).Run()
+		return runCommand("systemctl", "reload", appName)
 	case ServiceRunit:
-		return exec.Command("sv", "hup", appName).Run()
+		return runCommand("sv", "hup", appName)
 	default:
 		// For others, restart is the fallback
 		return Restart()
