@@ -1,7 +1,9 @@
 package server
 
 import (
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/apimgr/timezones/src/config"
@@ -53,8 +55,11 @@ func (s *Server) setupMiddleware() {
 	// Request ID
 	s.router.Use(middleware.RequestID)
 
-	// Real IP
-	s.router.Use(middleware.RealIP)
+	// Real IP (chi's middleware.RealIP is deprecated: it trusts forwarded
+	// headers unconditionally, which allows IP spoofing. Only trust them
+	// when the immediate TCP peer is a private/loopback address, per
+	// AI.md PART 12 "Trusted Proxies".)
+	s.router.Use(realIPMiddleware)
 
 	// Logger
 	s.router.Use(middleware.Logger)
@@ -150,4 +155,48 @@ func (s *Server) securityHeadersMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// realIPMiddleware rewrites r.RemoteAddr with the client IP resolved from
+// X-Forwarded-For/X-Real-IP, but only when the immediate TCP peer is a
+// trusted (private/loopback) address. Unlike chi's deprecated
+// middleware.RealIP, forwarded headers from an untrusted peer are ignored,
+// preventing IP spoofing (AI.md PART 12 "Trusted Proxies").
+func realIPMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isTrustedPeer(r.RemoteAddr) {
+			if ip := clientIPFromHeaders(r); ip != "" {
+				r.RemoteAddr = ip
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// clientIPFromHeaders extracts the client IP from trusted proxy headers.
+func clientIPFromHeaders(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		if ip := strings.TrimSpace(parts[0]); ip != "" {
+			return ip
+		}
+	}
+	if xrip := r.Header.Get("X-Real-IP"); xrip != "" {
+		return strings.TrimSpace(xrip)
+	}
+	return ""
+}
+
+// isTrustedPeer reports whether addr (host:port or bare host) is a
+// loopback or private-range address.
+func isTrustedPeer(addr string) bool {
+	host := addr
+	if h, _, err := net.SplitHostPort(addr); err == nil {
+		host = h
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsUnspecified()
 }
