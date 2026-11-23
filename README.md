@@ -61,7 +61,7 @@ Run the server in the foreground:
 timezones --address 127.0.0.1 --port 8080
 ```
 
-The server creates a default `server.yml` in its configuration directory. `CONFIG_DIR`, `PORT`, and `ADDRESS` override the corresponding configuration or listener setting. The public web pages are `/`, `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, `/server/docs/graphql`, and `/timezones/current/{iana-id}`.
+The server creates a default `server.yml` in its configuration directory. `CONFIG_DIR`, `PORT`, and `ADDRESS` override the corresponding configuration or listener setting. The browser includes timezone list, search, random, offset, abbreviation, identifier and name lookups at `/timezones`, current-time views at `/timezones/current/{iana-id}`, dataset summaries at `/stats` and `/count`, plus server information and documentation pages.
 
 ## Configuration
 
@@ -73,7 +73,7 @@ All endpoints are public and read-only. The versioned REST API is rooted at `/ap
 
 | Method and path | Purpose |
 |---|---|
-| `GET /api/v1/timezones` | List records; optional `offset` and `isdst` filters |
+| `GET /api/v1/timezones` | List records with `page`/`limit`; optional `offset` and `isdst` filters |
 | `GET /api/v1/timezones.json` | Return the embedded JSON dataset |
 | `GET /api/v1/timezones/search?q=...` | Search by name, description, abbreviation, or IANA identifier |
 | `GET /api/v1/timezones/offset/{offset}` | Filter by UTC offset in hours |
@@ -89,10 +89,12 @@ All endpoints are public and read-only. The versioned REST API is rooted at `/ap
 
 Add `.txt` to the list, search, random, statistics, and count endpoints for plain-text responses. Search queries are limited to 128 bytes. `/api/swagger` aliases the current OpenAPI document, and `/api/graphql` aliases the versioned GraphQL endpoint.
 
+JSON responses use an `ok` and `data` envelope. List and search responses include page, limit, total, and page-count metadata. The default page size is 250.
+
 ```sh
 curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/search?q=America%2FNew_York'
 curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/current/America/New_York'
-curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(identifier: \\\"America/New_York\\\") { value abbr utc } }"}' http://127.0.0.1:8080/api/v1/server/graphql
+curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(identifier: \"America/New_York\") { value abbr utc } }"}' http://127.0.0.1:8080/api/v1/server/graphql
 ```
 
 ## Other

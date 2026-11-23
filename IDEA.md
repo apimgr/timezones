@@ -93,7 +93,7 @@ All routes are public and require no authentication.
 
 | Method | Path | Purpose and request/response summary |
 |--------|------|--------------------------------------|
-| GET | `/api/v1/timezones` | List timezone records as JSON; accepts optional `offset` and `isdst` filters. |
+| GET | `/api/v1/timezones` | List timezone records with page/limit pagination; accepts optional `offset` and `isdst` filters. |
 | GET | `/api/v1/timezones.json` | Return the embedded JSON dataset. |
 | GET | `/api/v1/timezones/search?q={query}` | Search by display name, abbreviation, or IANA identifier; returns matching records. |
 | GET | `/api/v1/timezones/offset/{offset}` | Return records matching a UTC offset in hours. |
@@ -111,10 +111,15 @@ All routes are public and require no authentication.
 | GET | `/api/v1/count.txt` | Return the record count as plain text. |
 | GET | `/api/v1/` | Return API name, version, and endpoint entry points. |
 | GET | `/api/v1/server/healthz` | Return public service health and version information. |
+| GET | `/api/healthz` | Unversioned alias for the public health response. |
 | GET | `/api/v1/server/swagger` | Return the OpenAPI description. |
 | GET | `/api/swagger` | Return the current OpenAPI description for API tooling. |
 | POST | `/api/v1/server/graphql` | Execute a public read-only GraphQL query over timezone data. |
 | POST | `/api/graphql` | Execute the same GraphQL handler for the latest API version. |
+| GET | `/api/v1/server/about` | Return the about page content as JSON. |
+| GET | `/api/v1/server/help` | Return API help content as JSON. |
+| GET | `/api/v1/server/privacy` | Return the privacy notice as JSON. |
+| GET | `/api/v1/server/terms` | Return the terms of use as JSON. |
 | GET | `/server/docs/graphql` | Open a browser workbench for the GraphQL API. |
 | GET | `/server/about` | Render project description and features. |
 | GET | `/server/help` | Render real API usage examples and help information. |
@@ -122,3 +127,19 @@ All routes are public and require no authentication.
 | GET | `/timezones/current/{iana-id}` | Render the current local time for an IANA timezone identifier. |
 | GET | `/server/privacy` | Render the deployment privacy notice. |
 | GET | `/server/terms` | Render terms for the public reference service. |
+
+#### Browser routes
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/timezones` | Browse timezone records with page/limit pagination. |
+| GET | `/timezones/search?q={query}` | Search records and render matching timezone details. |
+| GET | `/timezones/offset/{offset}` | Browse records matching a UTC offset. |
+| GET | `/timezones/abbr/{abbr}` | Browse records matching an abbreviation. |
+| GET | `/timezones/utc/{iana-id}` | Render the record matching an IANA identifier. |
+| GET | `/timezones/value/{name}` | Render the record matching a display name. |
+| GET | `/timezones/random` | Render a randomly selected timezone record. |
+| GET | `/stats` | Render aggregate dataset statistics. |
+| GET | `/count` | Render the number of timezone records. |
+| GET | `/server/docs/swagger` | Browse the interactive OpenAPI documentation. |
+| POST | `/server/preferences` | Change the browser theme preference. |
