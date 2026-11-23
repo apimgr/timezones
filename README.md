@@ -61,7 +61,7 @@ Run the server in the foreground:
 timezones --address 127.0.0.1 --port 8080
 ```
 
-The server creates a default `server.yml` in its configuration directory. `CONFIG_DIR`, `PORT`, and `ADDRESS` override the corresponding configuration or listener setting. The public web pages are `/`, `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, and `/timezones/current/{iana-id}`.
+The server creates a default `server.yml` in its configuration directory. `CONFIG_DIR`, `PORT`, and `ADDRESS` override the corresponding configuration or listener setting. The public web pages are `/`, `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, `/server/docs/graphql`, and `/timezones/current/{iana-id}`.
 
 ## Configuration
 
@@ -85,12 +85,14 @@ All endpoints are public and read-only. The versioned REST API is rooted at `/ap
 | `GET /api/v1/stats` and `/api/v1/count` | Return dataset statistics or record count |
 | `GET /api/v1/server/healthz` | Check service health |
 | `GET /api/v1/server/swagger` | Retrieve the OpenAPI JSON description |
+| `POST /api/v1/server/graphql` | Query timezone records, current time, or dataset statistics |
 
-Add `.txt` to the list, search, random, statistics, and count endpoints for plain-text responses. Search queries are limited to 128 bytes. `/api/swagger` aliases the current OpenAPI document.
+Add `.txt` to the list, search, random, statistics, and count endpoints for plain-text responses. Search queries are limited to 128 bytes. `/api/swagger` aliases the current OpenAPI document, and `/api/graphql` aliases the versioned GraphQL endpoint.
 
 ```sh
 curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/search?q=America%2FNew_York'
 curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/current/America/New_York'
+curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(identifier: \\\"America/New_York\\\") { value abbr utc } }"}' http://127.0.0.1:8080/api/v1/server/graphql
 ```
 
 ## Other

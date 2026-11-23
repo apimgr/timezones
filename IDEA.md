@@ -115,7 +115,7 @@ All routes are public and require no authentication.
 | GET | `/api/swagger` | Return the current OpenAPI description for API tooling. |
 | POST | `/api/v1/server/graphql` | Execute a public read-only GraphQL query over timezone data. |
 | POST | `/api/graphql` | Execute the same GraphQL handler for the latest API version. |
-| GET | `/server/docs/graphql` | Open the GraphiQL interface for the GraphQL API. |
+| GET | `/server/docs/graphql` | Open a browser workbench for the GraphQL API. |
 | GET | `/server/about` | Render project description and features. |
 | GET | `/server/help` | Render real API usage examples and help information. |
 | GET | `/server/healthz` | Render public service health. |
