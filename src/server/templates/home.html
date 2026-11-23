@@ -14,6 +14,39 @@
     </div>
 </div>
 
+<div class="section finder-section">
+    <h2>Find a timezone</h2>
+    <p>Search by timezone name, abbreviation, city, region, or IANA identifier.</p>
+    <form class="timezone-search" method="get" action="/">
+        <label for="timezone-query">Timezone</label>
+        <div class="search-controls">
+            <input id="timezone-query" name="q" type="search" value="{{.Query}}" maxlength="128" placeholder="America/New_York, EST, or Tokyo">
+            <button type="submit">Search</button>
+        </div>
+    </form>
+    {{if .Query}}
+    <h3>Results for “{{.Query}}”</h3>
+    {{if .Results}}
+    <div class="timezone-results">
+        {{range .Results}}
+        <article class="timezone-result">
+            <h4>{{.Value}}</h4>
+            <p>{{.Text}}</p>
+            <dl>
+                <div><dt>Abbreviation</dt><dd>{{.Abbr}}</dd></div>
+                <div><dt>UTC offset</dt><dd>{{printf "%+.2f" .Offset}} hours</dd></div>
+                <div><dt>DST flag in dataset</dt><dd>{{.IsDST}}</dd></div>
+                <div><dt>IANA identifiers</dt><dd>{{range $i, $identifier := .UTC}}{{if $i}}, {{end}}<code>{{$identifier}}</code>{{end}}</dd></div>
+            </dl>
+        </article>
+        {{end}}
+    </div>
+    {{else}}
+    <p>No matching timezone records were found.</p>
+    {{end}}
+    {{end}}
+</div>
+
 <div class="section">
     <h2>API Endpoints</h2>
     <div class="endpoints-grid">

@@ -1,6 +1,9 @@
 package server
 
 import (
+	crand "crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -10,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/apimgr/timezones/src/config"
+	"github.com/apimgr/timezones/src/timezones"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -28,19 +32,97 @@ type APIError struct {
 
 // handleHome serves the homepage
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if len(query) > 128 {
+		http.Error(w, "Search query must be at most 128 bytes", http.StatusBadRequest)
+		return
+	}
+
+	var results []timezones.Timezone
+	if query != "" {
+		results = s.tzService.Search(query)
+	}
+	theme := "dark"
+	if cookie, err := r.Cookie("theme"); err == nil && (cookie.Value == "light" || cookie.Value == "dark" || cookie.Value == "auto") {
+		theme = cookie.Value
+	}
+	csrfToken, err := ensureCSRFToken(w, r)
+	if err != nil {
+		http.Error(w, "Unable to initialize request protection", http.StatusInternalServerError)
+		return
+	}
 	data := map[string]interface{}{
 		"Title":      "Timezones API",
 		"Version":    s.version,
 		"BuildDate":  s.buildDate,
 		"Commit":     s.commit,
 		"TotalCount": s.tzService.Count(),
-		"Theme":      config.GetTheme(),
+		"Theme":      theme,
+		"NextTheme":  nextTheme(theme),
+		"CSRFToken":  csrfToken,
+		"Query":      query,
+		"Results":    results,
 	}
 
 	if err := renderTemplate(w, "base.html", data); err != nil {
 		http.Error(w, "Failed to render template", http.StatusInternalServerError)
 		return
 	}
+}
+
+func nextTheme(current string) string {
+	switch current {
+	case "dark":
+		return "light"
+	case "light":
+		return "auto"
+	default:
+		return "dark"
+	}
+}
+
+func ensureCSRFToken(w http.ResponseWriter, r *http.Request) (string, error) {
+	if cookie, err := r.Cookie("csrf_token"); err == nil && len(cookie.Value) == 64 {
+		if _, decodeErr := hex.DecodeString(cookie.Value); decodeErr == nil {
+			return cookie.Value, nil
+		}
+	}
+	raw := make([]byte, 32)
+	if _, err := crand.Read(raw); err != nil {
+		return "", fmt.Errorf("generate CSRF token: %w", err)
+	}
+	token := hex.EncodeToString(raw)
+	http.SetCookie(w, &http.Cookie{
+		Name: "csrf_token", Value: token, Path: "/", MaxAge: 31536000,
+		SameSite: http.SameSiteStrictMode, Secure: r.TLS != nil,
+	})
+	return token, nil
+}
+
+func (s *Server) handleThemePreference(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("csrf_token")
+	if err != nil || len(cookie.Value) != 64 || len(r.FormValue("csrf_token")) != 64 || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(r.FormValue("csrf_token"))) != 1 {
+		respondError(w, http.StatusForbidden, "CSRF token validation failed")
+		return
+	}
+	theme := r.FormValue("theme")
+	if theme != "light" && theme != "dark" && theme != "auto" {
+		http.Error(w, "Invalid theme", http.StatusBadRequest)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: "theme", Value: theme, Path: "/", MaxAge: 31536000,
+		SameSite: http.SameSiteLaxMode, Secure: r.TLS != nil,
+	})
+	target := r.Referer()
+	if target == "" {
+		target = "/"
+	} else if parsed, err := url.Parse(target); err != nil || parsed.IsAbs() || parsed.Host != "" || !strings.HasPrefix(parsed.Path, "/") {
+		target = "/"
+	} else {
+		target = parsed.RequestURI()
+	}
+	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 
 // handleHealth returns server health status
@@ -80,9 +162,13 @@ func (s *Server) handleTimezonesAllTxt(w http.ResponseWriter, r *http.Request) {
 
 // handleTimezonesSearch searches timezones
 func (s *Server) handleTimezonesSearch(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query().Get("q")
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if query == "" {
 		respondError(w, http.StatusBadRequest, "Missing search query parameter 'q'")
+		return
+	}
+	if len(query) > 128 {
+		respondError(w, http.StatusBadRequest, "Search query must be at most 128 bytes")
 		return
 	}
 
@@ -95,7 +181,7 @@ func (s *Server) handleTimezonesSearch(w http.ResponseWriter, r *http.Request) {
 
 // handleTimezonesSearchTxt searches timezones and returns plain text
 func (s *Server) handleTimezonesSearchTxt(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query().Get("q")
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if query == "" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
@@ -103,6 +189,10 @@ func (s *Server) handleTimezonesSearchTxt(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if len(query) > 128 {
+		http.Error(w, "Search query must be at most 128 bytes", http.StatusBadRequest)
+		return
+	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	results := s.tzService.Search(query)
 	for _, tz := range results {
@@ -261,8 +351,7 @@ func (s *Server) handleManifest(w http.ResponseWriter, r *http.Request) {
 		"background_color": "#1a1a1a",
 		"theme_color":      "#0066cc",
 		"icons": []map[string]string{
-			{"src": "/static/images/icon-192.png", "sizes": "192x192", "type": "image/png"},
-			{"src": "/static/images/icon-512.png", "sizes": "512x512", "type": "image/png"},
+			{"src": "/static/images/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"},
 		},
 	}
 	respondJSON(w, http.StatusOK, manifest)
@@ -275,8 +364,10 @@ func (s *Server) handleServiceWorker(w http.ResponseWriter, r *http.Request) {
 const CACHE_NAME = 'timezones-api-v1';
 const urlsToCache = [
   '/',
+  '/manifest.json',
   '/static/css/main.css',
-  '/static/js/main.js'
+  '/static/js/main.js',
+  '/static/images/icon.svg'
 ];
 
 self.addEventListener('install', event => {

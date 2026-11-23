@@ -42,12 +42,12 @@ func (s *Service) Count() int {
 
 // GetRawJSON returns the raw JSON data
 func (s *Service) GetRawJSON() []byte {
-	return s.rawJSON
+	return append([]byte(nil), s.rawJSON...)
 }
 
 // GetAll returns all timezones
 func (s *Service) GetAll() []Timezone {
-	return s.timezones
+	return cloneTimezones(s.timezones)
 }
 
 // Search searches timezones by query string
@@ -145,4 +145,14 @@ func (s *Service) GetStats() map[string]interface{} {
 		"dst_timezones":     dstCount,
 		"non_dst_timezones": len(s.timezones) - dstCount,
 	}
+}
+
+
+func cloneTimezones(source []Timezone) []Timezone {
+	cloned := make([]Timezone, len(source))
+	copy(cloned, source)
+	for i := range cloned {
+		cloned[i].UTC = append([]string(nil), source[i].UTC...)
+	}
+	return cloned
 }

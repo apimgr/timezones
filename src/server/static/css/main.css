@@ -1,6 +1,7 @@
 /* Timezones API - Main Stylesheet */
 
-:root {
+html.theme-dark, html.theme-auto {
+  color-scheme: dark;
   --bg-primary: #1a1a1a;
   --bg-secondary: #2d2d2d;
   --bg-tertiary: #404040;
@@ -21,13 +22,26 @@
   --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
 }
 
-[data-theme="light"] {
+html.theme-light {
+  color-scheme: light;
   --bg-primary: #ffffff;
   --bg-secondary: #f5f5f5;
   --bg-tertiary: #e0e0e0;
   --text-primary: #1a1a1a;
   --text-secondary: #404040;
   --border-color: #e0e0e0;
+}
+
+@media (prefers-color-scheme: light) {
+  html.theme-auto {
+    color-scheme: light;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e0e0e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #404040;
+    --border-color: #e0e0e0;
+  }
 }
 
 * {
@@ -300,5 +314,87 @@ body {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* Server-rendered timezone search and result cards */
+.timezone-search {
+  margin-top: var(--space-md);
+}
+
+.timezone-search label {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-weight: 600;
+}
+
+.search-controls {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.search-controls input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.search-controls button {
+  min-width: 96px;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent-primary);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.timezone-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.timezone-result {
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+.timezone-result h4 {
+  margin-bottom: var(--space-xs);
+}
+
+.timezone-result dl > div {
+  margin-top: var(--space-sm);
+}
+
+.timezone-result dt {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.timezone-result dd {
+  overflow-wrap: anywhere;
+}
+
+.timezone-result code {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .search-controls {
+    flex-direction: column;
   }
 }

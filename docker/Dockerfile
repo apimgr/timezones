@@ -1,7 +1,7 @@
 # =============================================================================
 # Build Stage - Compile Go binary
 # =============================================================================
-FROM golang:alpine AS builder
+FROM casjaysdev/go:latest AS builder
 
 ARG TARGETARCH
 ARG VERSION=dev
@@ -16,7 +16,7 @@ RUN go mod download
 
 # Copy source and build
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -buildvcs=false -trimpath \
     -ldflags "-s -w -X 'main.Version=${VERSION}' -X 'main.Commit=${VCS_REF}' -X 'main.BuildDate=${BUILD_DATE}'" \
     -o /app ./src
 
@@ -30,26 +30,6 @@ ARG VERSION=dev
 ARG BUILD_DATE
 ARG VCS_REF
 ARG LICENSE=MIT
-
-# Static Labels
-LABEL maintainer="apimgr <apimgr@casjay.pro>" \
-      org.opencontainers.image.vendor="apimgr" \
-      org.opencontainers.image.authors="apimgr" \
-      org.opencontainers.image.title="timezones" \
-      org.opencontainers.image.base.name="timezones" \
-      org.opencontainers.image.description="Containerized version of timezones" \
-      org.opencontainers.image.url="https://github.com/apimgr/timezones" \
-      org.opencontainers.image.source="https://github.com/apimgr/timezones" \
-      org.opencontainers.image.documentation="https://github.com/apimgr/timezones" \
-      org.opencontainers.image.vcs-type="Git" \
-      com.github.containers.toolbox="false"
-
-# Dynamic Labels (from ARGs)
-LABEL org.opencontainers.image.licenses="${LICENSE}" \
-      org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.schema-version="${VERSION}" \
-      org.opencontainers.image.revision="${VCS_REF}"
 
 # Install required packages including Tor
 RUN apk add --no-cache \
@@ -84,9 +64,9 @@ EXPOSE 80
 # Stop signal for graceful shutdown
 STOPSIGNAL SIGRTMIN+3
 
-# Health check (long start period for services that need initialization)
-HEALTHCHECK --start-period=10m --interval=5m --timeout=15s --retries=3 \
-    CMD /usr/local/bin/timezones --status || exit 1
+# Check the application's HTTP health endpoint.
+HEALTHCHECK --start-period=30s --interval=30s --timeout=5s --retries=3 \
+    CMD ["/usr/local/bin/timezones", "--status", "--port", "80"]
 
 # Use tini as init with signal propagation
 # -p SIGTERM: propagate SIGTERM to child processes

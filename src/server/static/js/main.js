@@ -1,24 +1,28 @@
-// Timezones API - Main JavaScript
+// Theme cycle: dark -> light -> auto -> dark.
+const THEME_CYCLE = ['dark', 'light', 'auto'];
 
-// Theme toggle
-function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
-
-  // Update icon
-  const icon = document.querySelector('.theme-icon');
-  icon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+function currentTheme() {
+  const match = document.documentElement.className.match(/theme-(dark|light|auto)/);
+  return match ? match[1] : 'dark';
 }
 
-// Initialize theme from localStorage
-document.addEventListener('DOMContentLoaded', () => {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-
-  const icon = document.querySelector('.theme-icon');
-  if (icon) {
-    icon.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+function setTheme(theme) {
+  document.documentElement.className = `theme-${theme}`;
+  document.cookie = `theme=${theme}; path=/; max-age=31536000; SameSite=Lax`;
+  const button = document.querySelector('.theme-toggle');
+  const icon = button?.querySelector('.theme-icon');
+  const icons = { dark: '🌙', light: '☀️', auto: '◐' };
+  if (icon) icon.textContent = icons[theme];
+  if (button) {
+    button.setAttribute('aria-label', `Switch theme (currently ${theme})`);
+    button.title = `Switch theme (currently ${theme})`;
   }
+}
+
+document.querySelectorAll('.theme-toggle-form').forEach((form) => {
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const next = THEME_CYCLE[(THEME_CYCLE.indexOf(currentTheme()) + 1) % THEME_CYCLE.length];
+    setTheme(next);
+  });
 });
