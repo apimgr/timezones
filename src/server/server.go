@@ -22,6 +22,7 @@ type Server struct {
 	version      string
 	buildDate    string
 	commit       string
+	limiters     [64]rateLimitShard
 }
 
 // New creates a new HTTP server
@@ -65,9 +66,12 @@ func (s *Server) setupMiddleware() {
 	s.router.Use(middleware.Logger)
 
 	// Timeout
-	s.router.Use(middleware.Timeout(60 * time.Second))
+	s.router.Use(middleware.Timeout(30 * time.Second))
 
-	// Throttle concurrent requests
+	// Bound request targets and bodies before handlers process untrusted input.
+	s.router.Use(requestLimitsMiddleware)
+
+	// Throttle concurrent requests.
 	s.router.Use(middleware.Throttle(1000))
 
 	// CORS
@@ -75,6 +79,10 @@ func (s *Server) setupMiddleware() {
 
 	// Security headers
 	s.router.Use(s.securityHeadersMiddleware)
+
+	// Rate limiting runs inside response-header middleware so limited replies
+	// receive the same CORS and security headers as normal responses.
+	s.router.Use(s.rateLimitMiddleware)
 }
 
 // setupRoutes configures all HTTP routes
@@ -86,6 +94,7 @@ func (s *Server) setupRoutes() {
 	// Public routes
 	s.router.Get("/", s.handleHome)
 	s.router.Get("/healthz", s.handleHealth)
+	s.router.Post("/server/preferences", s.handleThemePreference)
 	s.router.Get("/health", s.handleHealth)
 	s.router.Get("/status", s.handleHealth)
 

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,6 +19,7 @@ import (
 	"github.com/apimgr/timezones/src/mode"
 	"github.com/apimgr/timezones/src/paths"
 	"github.com/apimgr/timezones/src/server"
+	serviceManager "github.com/apimgr/timezones/src/service"
 	"github.com/apimgr/timezones/src/timezones"
 )
 
@@ -78,14 +80,28 @@ func main() {
 		return
 	}
 
-	// Status check (for health checks)
+	// Status check probes the configured HTTP health endpoint.
 	if *showStatus {
-		os.Exit(0)
+		statusAddress := *address
+		if statusAddress == "" || statusAddress == "0.0.0.0" || statusAddress == "::" {
+			statusAddress = "127.0.0.1"
+		}
+		statusPort := *port
+		if statusPort == "" {
+			statusPort = os.Getenv("PORT")
+		}
+		if statusPort == "" {
+			statusPort = "8080"
+		}
+		os.Exit(checkStatus(statusAddress, statusPort))
 	}
 
 	// Handle service commands
 	if *serviceCmd != "" {
-		handleServiceCommand(*serviceCmd)
+		if err := handleServiceCommand(*serviceCmd, *address, *port); err != nil {
+			log.Printf("Service command failed: %v", err)
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -154,27 +170,33 @@ func main() {
 
 	// Setup graceful shutdown
 	httpServer := &http.Server{
-		Addr:         fmt.Sprintf("%s:%s", *address, *port),
+		Addr:         net.JoinHostPort(*address, *port),
 		Handler:      srv.Router(),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
-	// Start server in goroutine
+	// Start the listener asynchronously so bind failures return through main.
+	serveErrors := make(chan error, 1)
 	go func() {
 		log.Printf("Server listening on %s:%s", *address, *port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			serveErrors <- err
 		}
 	}()
 
-	// Wait for interrupt signal
+	// Wait for either an operating-system shutdown request or listener failure.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Println("Shutting down server...")
+	defer signal.Stop(quit)
+	select {
+	case sig := <-quit:
+		log.Printf("Received %s; shutting down server", sig)
+	case err := <-serveErrors:
+		log.Printf("Server failed: %v", err)
+		os.Exit(1)
+	}
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -187,25 +209,52 @@ func main() {
 	log.Println("Server stopped")
 }
 
+
+func checkStatus(address, port string) int {
+	client := &http.Client{Timeout: 2 * time.Second}
+	response, err := client.Get("http://" + net.JoinHostPort(address, port) + "/healthz")
+	if err != nil {
+		return 1
+	}
+	defer response.Body.Close()
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return 1
+	}
+	return 0
+}
+
 // handleServiceCommand handles service management commands
-func handleServiceCommand(cmd string) {
+func handleServiceCommand(cmd, address, port string) error {
 	switch cmd {
 	case "install":
-		fmt.Println("Service installation not yet implemented")
-		fmt.Println("Use systemd/launchd/rc.d to manage the service")
+		return serviceManager.Install()
 	case "uninstall":
-		fmt.Println("Service uninstallation not yet implemented")
+		return serviceManager.Uninstall()
 	case "start":
-		fmt.Println("Use 'systemctl start timezones' or run the binary directly")
+		return serviceManager.Start()
 	case "stop":
-		fmt.Println("Use 'systemctl stop timezones' or send SIGTERM to the process")
+		return serviceManager.Stop()
 	case "restart":
-		fmt.Println("Use 'systemctl restart timezones'")
+		return serviceManager.Restart()
+	case "reload":
+		return serviceManager.Reload()
 	case "status":
-		fmt.Println("Use 'systemctl status timezones' or --status flag")
+		if address == "" || address == "0.0.0.0" || address == "::" {
+			address = "127.0.0.1"
+		}
+		if port == "" {
+			port = os.Getenv("PORT")
+		}
+		if port == "" {
+			port = "8080"
+		}
+		if checkStatus(address, port) == 0 {
+			fmt.Printf("Timezones API is healthy at %s:%s\n", address, port)
+			return nil
+		}
+		return fmt.Errorf("timezones API is not responding at %s:%s", address, port)
 	default:
-		fmt.Printf("Unknown service command: %s\n", cmd)
-		fmt.Println("Available commands: install, uninstall, start, stop, restart, status")
+		return fmt.Errorf("unknown service command %q (use install, uninstall, start, stop, restart, reload, or status)", cmd)
 	}
 }
 
