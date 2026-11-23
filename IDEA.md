@@ -27,12 +27,12 @@ client_binary: timezones-cli
 - Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`
 - CLI client (`timezones-cli`) for terminal lookup: `timezones-cli "America/New_York"`
 - OpenAPI/Swagger docs at `/api/{api_version}/server/swagger`
-- GraphQL at `/graphql`
+- GraphQL at `/api/{api_version}/server/graphql` with `/api/graphql` as the latest-version alias
 
 **Non-goals:**
 - No user accounts, registration, or login of any kind
 - No admin web panel (server configured via `server.yml` only)
-- No real-time DST transition computation (dataset is static, embedded at build time)
+- No future daylight-saving transition schedule or forecast
 - No calendar or scheduling features
 - No paid tiers, no API keys, no rate-limited access tiers
 
@@ -86,3 +86,39 @@ No external services called at runtime.
 
 - **No authentication on any endpoint**: intentional. Public read-only reference API.
 - **All responses include `Access-Control-Allow-Origin: *`**: intentional. Public data API designed for cross-origin browser use.
+
+### API routes
+
+All routes are public and require no authentication.
+
+| Method | Path | Purpose and request/response summary |
+|--------|------|--------------------------------------|
+| GET | `/api/v1/timezones` | List timezone records as JSON; accepts optional `offset` and `isdst` filters. |
+| GET | `/api/v1/timezones.json` | Return the embedded JSON dataset. |
+| GET | `/api/v1/timezones/search?q={query}` | Search by display name, abbreviation, or IANA identifier; returns matching records. |
+| GET | `/api/v1/timezones/offset/{offset}` | Return records matching a UTC offset in hours. |
+| GET | `/api/v1/timezones/abbr/{abbr}` | Return records matching an abbreviation. |
+| GET | `/api/v1/timezones/utc/{iana-id}` | Return a record matching an IANA identifier. |
+| GET | `/api/v1/timezones/value/{name}` | Return a record matching a display name. |
+| GET | `/api/v1/timezones/random` | Return one random timezone record. |
+| GET | `/api/v1/stats` | Return aggregate dataset counts. |
+| GET | `/api/v1/timezones/current/{iana-id}` | Return the current local time for an IANA timezone identifier. |
+| GET | `/api/v1/timezones.txt` | Return the full list as plain text. |
+| GET | `/api/v1/timezones/search.txt?q={query}` | Return matching records as plain text. |
+| GET | `/api/v1/timezones/random.txt` | Return one random record as plain text. |
+| GET | `/api/v1/stats.txt` | Return dataset statistics as plain text. |
+| GET | `/api/v1/count` | Return the record count as JSON. |
+| GET | `/api/v1/count.txt` | Return the record count as plain text. |
+| GET | `/api/v1/` | Return API name, version, and endpoint entry points. |
+| GET | `/api/v1/server/healthz` | Return public service health and version information. |
+| GET | `/api/v1/server/swagger` | Return the OpenAPI description. |
+| GET | `/api/swagger` | Return the current OpenAPI description for API tooling. |
+| POST | `/api/v1/server/graphql` | Execute a public read-only GraphQL query over timezone data. |
+| POST | `/api/graphql` | Execute the same GraphQL handler for the latest API version. |
+| GET | `/server/docs/graphql` | Open the GraphiQL interface for the GraphQL API. |
+| GET | `/server/about` | Render project description and features. |
+| GET | `/server/help` | Render real API usage examples and help information. |
+| GET | `/server/healthz` | Render public service health. |
+| GET | `/timezones/current/{iana-id}` | Render the current local time for an IANA timezone identifier. |
+| GET | `/server/privacy` | Render the deployment privacy notice. |
+| GET | `/server/terms` | Render terms for the public reference service. |

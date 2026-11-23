@@ -1,17 +1,9 @@
 # Implementation status
 
-The active product specification is [IDEA.md](IDEA.md), and the implementation
-rules are in [AI.md](AI.md). This file replaces an older status report that
-referred to a removed SPEC.md and described features the current IDEA.md does
-not require.
+`AI.md` is the implementation source of truth and `IDEA.md` defines the product scope. This status summarizes the current tree; it is not a claim of full compliance.
 
-The current service embeds timezone JSON and web assets, provides REST lookup
-routes, a server-rendered search page, static PWA assets, a health endpoint,
-client-side rate protection, and the `timezones-cli` lookup binary. GitHub
-workflows build the server and CLI releases and the multi-architecture Docker
-image.
+The service embeds timezone records and web assets, provides versioned REST lookup endpoints, a server-rendered homepage, theme preferences, and the `timezones-cli` binary. It also serves public about, help, health, privacy, terms, and API documentation pages, paired JSON page endpoints, an OpenAPI JSON description, and basic robots, sitemap, security.txt, and llms.txt discovery resources.
 
-Known unfinished requirements and verification limits are tracked in
-[TODO.AI.md](TODO.AI.md). This status is descriptive only; no build, test, lint,
-format, or workflow validation was performed for the current implementation
-pass.
+The implementation remains incomplete against the full AI.md baseline. Verified remaining work is tracked in [TODO.AI.md](TODO.AI.md). In particular, GraphQL, full CLI and server baseline requirements, complete content negotiation, localization, and integration verification are still outstanding. The current-time API and page were added in this pass and still need execution-level verification.
+
+No build, test, lint, formatter, or workflow validation was run during the implementation pass.
