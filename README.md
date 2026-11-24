@@ -2,6 +2,8 @@
 
 Timezones API is a public reference service for bundled world timezone records. It provides versioned REST and read-only GraphQL endpoints, an authenticated Streamable HTTP MCP endpoint, a server-rendered web interface, and a companion terminal client. Public timezone reads need no token; MCP and token-management operations use owner or operator credentials. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
 
+The embedded translation catalogs currently support English, Spanish, French, Arabic (right-to-left), German, and Italian. Browser requests can select a locale with `?lang=es`; the server also follows a saved language preference and the request's `Accept-Language` header.
+
 [![GitHub Actions](https://github.com/apimgr/timezones/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/timezones/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/apimgr/timezones)](LICENSE.md) [![Documentation](https://readthedocs.org/projects/apimgr-timezones/badge/?version=latest)](https://apimgr-timezones.readthedocs.io/en/latest/)
 
 ## Install
