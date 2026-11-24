@@ -14,7 +14,7 @@ This list records verified gaps between `AI.md`, `IDEA.md`, and the current impl
 - [ ] Complete content negotiation for browser, text browser, HTTP tool, and API clients across all public routes.
 - [x] Add browser pages for list/search/random/filter/lookup timezone routes and dataset statistics/count. (Implemented in the working tree; retain until committed.)
 - [ ] Complete API alignment for all routes and detailed health data under AI.md PARTS 9, 13, and 14. Standard success/error envelopes, list/search pagination and filtering, pagination overflow handling, forwarded-host allow-list enforcement, `/timezones.json` OpenAPI schema, and browser/text/API content negotiation are implemented in the working tree; retain those fixes until committed.
-- [ ] Implement operator and owner tokens, token-management browser/API routes, protected metrics and MCP endpoints, SQLite persistence, and their full security and lifecycle requirements from AI.md PARTS 5, 8, 10–12, 14, 20, 28, and 32. The coordinator must provide the exact project-specific `owner_token` cookie/localStorage name before browser token storage is implemented; AI.md requires an 8-letter suffix recorded in IDEA.md and forbids guessing it.
+- [ ] Implement operator and owner tokens, token-management browser/API routes, protected metrics and MCP endpoints, SQLite persistence, and their full security and lifecycle requirements from AI.md PARTS 5, 8, 10–12, 14, 20, 28, and 32. Use the stable browser cookie/localStorage key recorded in IDEA.md as `owner_token`.
 
 ## Server baseline
 
