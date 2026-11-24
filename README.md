@@ -115,4 +115,4 @@ This software is provided “as is” without warranty of any kind. Timezone dat
 
 ## License
 
-Project code is MIT licensed. The embedded timezone dataset has separate source and redistribution terms. Review [LICENSE.md](LICENSE.md) before redistribution.
+Project code is MIT licensed. The embedded timezone dataset is copied from [dmfilipenko/timezones.json](https://github.com/dmfilipenko/timezones.json) at commit `658abf632bae9c0313360702e3018024eb88a874` and is separately attributed under its MIT license in [LICENSE.md](LICENSE.md).

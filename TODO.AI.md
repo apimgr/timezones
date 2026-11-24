@@ -22,8 +22,8 @@ This list records verified gaps between `AI.md`, `IDEA.md`, and the current impl
 - [ ] Complete the AI.md server baseline for TLS, service lifecycle, logging, health details, scheduler, backup/restore, metrics, and optional Tor/I2P behavior.
 - [ ] Complete web security, SEO metadata, cache/version invalidation, accessibility, and configured page-content behavior from AI.md PARTS 9, 11, 13, and 16. The static asset mount, service-worker registration, offline navigation fallback, HTTP-tool text rendering, and no-JavaScript text-browser response are implemented and covered by tests; retain these changes until committed.
 - [ ] Complete every required server-rendered page and synchronize page content, README, and all current documentation with implemented behavior and AI.md; verify all documentation links and route inventories.
-- [ ] Implement the AI.md PART 11 disclosure and contact system: contact and DPO pages/API, CAPTCHA and review/confirmation flow, encrypted security submissions and researcher status links, operator maintenance commands, PGP lifecycle, hall of fame, security policy, security.txt and public key routes. The route inventory in IDEA.md now records the required public surfaces; none of these handlers or persistence workflows is implemented.
-- [ ] Implement the required multilingual catalogs and parity checks, or reconcile the English-only product scope with the required AI.md I18N baseline.
+- [ ] Implement the AI.md PART 11 disclosure and contact system: contact and DPO pages/API, CAPTCHA and review/confirmation flow, encrypted security submissions and researcher status links, operator maintenance commands, PGP lifecycle, hall of fame, security policy, security.txt and public key routes. The required public surfaces are specified in AI.md; none of these handlers or persistence workflows is implemented.
+- [ ] Implement the required English, Spanish, French, Arabic RTL, German, and Italian catalogs, language registry, translation-key parity checks, and complete user-visible string coverage from AI.md PART 30.
 - [ ] Provide the required server/client CLI parity, configuration, completion, and interactive client behavior in AI.md PARTS 8 and 32.
 
 ## Build, governance, and verification
@@ -31,5 +31,5 @@ This list records verified gaps between `AI.md`, `IDEA.md`, and the current impl
 - [ ] Complete the required container, Makefile, CI/release, supply-chain, community, and multi-provider files against AI.md PARTS 25–28 and GitHub requirements.
 - [ ] Complete required Docker, Incus, endpoint-coverage, browser E2E, and provider-workflow verification. `make test` passes the coverage gate; browser E2E and provider workflow verification remain outstanding.
 - [ ] Implement `tests/incus.sh` full-app service lifecycle and `tests/e2e.sh` browser E2E suites, then verify them in isolated environments.
-- [ ] Verify and document timezone dataset provenance and redistribution terms in `LICENSE.md`.
+- [ ] Verify and document timezone dataset provenance and redistribution terms plus third-party dependency licenses in `LICENSE.md`. (The dataset source/hash/license and scanned Go/vendor attributions are recorded in the working tree; remove only after that change is committed.)
 - [ ] Complete browser interaction, responsive/accessibility, and OpenAPI UI verification. The built server passed a container HTTP smoke check, and headless Chromium loaded the homepage and its local assets; the full visual/accessibility review remains outstanding.
