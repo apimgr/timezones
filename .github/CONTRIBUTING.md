@@ -8,7 +8,11 @@ Go builds and tests use the Docker toolchain configured by the Makefile. Do not 
 make dev
 make test
 ./tests/run_tests.sh
-docker run --rm --name "timezones-docs-$(tr -dc 'a-z0-9' </dev/urandom | head -c8)" -v "$PWD:/docs" -w /docs python:3.12-slim sh -c 'pip install -r docs/requirements.txt && mkdocs build --strict -d /tmp/timezones-docs/site'
+DOCS_TEMP_ROOT="${TMPDIR:-/tmp}/apimgr"
+mkdir -p "$DOCS_TEMP_ROOT"
+DOCS_TEMP_DIR="$(mktemp -d "$DOCS_TEMP_ROOT/timezones-XXXXXX")"
+trap 'rm -rf -- "$DOCS_TEMP_DIR"' EXIT
+docker run --rm --name "timezones-docs-$(tr -dc 'a-z0-9' </dev/urandom | head -c8)" -v "$PWD:/docs" -v "$DOCS_TEMP_DIR:/output" -w /docs python:3.12-slim sh -c 'pip install -r docs/requirements.txt && mkdocs build --strict -d /output/site'
 ```
 
 The integration script requires Docker and exercises the server and CLI binaries. MkDocs requirements are listed in `docs/requirements.txt`.

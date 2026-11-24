@@ -13,6 +13,7 @@ repo: https://github.com/apimgr/timezones
 license: MIT
 binary: timezones
 client_binary: timezones-cli
+owner_token: timezones_owner_token_wxaarpwb
 
 ## Business logic
 
