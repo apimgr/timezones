@@ -1,6 +1,6 @@
 # Timezones API
 
-Timezones API is a public, read-only reference service for bundled world timezone records. It provides versioned REST endpoints, a server-rendered web interface, and a companion terminal client. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
+Timezones API is a public reference service for bundled world timezone records. It provides versioned REST and read-only GraphQL endpoints, an authenticated Streamable HTTP MCP endpoint, a server-rendered web interface, and a companion terminal client. Public timezone reads need no token; MCP and token-management operations use owner or operator credentials. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
 
 [![GitHub Actions](https://github.com/apimgr/timezones/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/timezones/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/apimgr/timezones)](LICENSE.md) [![Documentation](https://readthedocs.org/projects/apimgr-timezones/badge/?version=latest)](https://apimgr-timezones.readthedocs.io/en/latest/)
 
@@ -36,10 +36,10 @@ On Windows, download the matching `.exe` files and add their directory to `%PATH
 
 ## Docker
 
-The production image listens on port 80. Its entrypoint enables Tor when available; set `ENABLE_TOR=false` to disable it.
+The production image listens on port 80 and includes Tor. The server manages its own isolated Tor process and enables the hidden service when the Tor binary is available.
 
 ```sh
-docker run --rm -p 8080:80 -e ENABLE_TOR=false ghcr.io/apimgr/timezones:latest
+docker run --rm -p 8080:80 ghcr.io/apimgr/timezones:latest
 ```
 
 ## Client CLI
@@ -69,7 +69,7 @@ The server loads `server.yml` and creates a default file on first start. Current
 
 ## API
 
-All endpoints are public and read-only. The versioned REST API is rooted at `/api/v1`.
+Public timezone REST reads and web pages require no token. Owner-token management, MCP, metrics, and operator-only routes use the authentication rules in the server documentation. The versioned REST API is rooted at `/api/v1`.
 
 | Method and path | Purpose |
 |---|---|
@@ -105,7 +105,7 @@ curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(ident
 
 ## Development
 
-The timezone dataset and web assets are embedded in the Go binaries. Go commands run in the Docker toolchain configured by the Makefile. `make dev` builds the current platform, `make build` builds the release platforms, and `make test` runs Go vet, vulnerability checks, and tests with coverage.
+The timezone dataset and web assets are embedded in the Go binaries. Go commands run in the Docker toolchain configured by the Makefile. `make dev` builds the current platform, `make build` builds the release platforms, and `make test` runs Go vet, vulnerability checks, tests, and coverage enforcement. Run `./tests/run_tests.sh` for Docker-based binary and HTTP integration checks.
 
 GitHub Actions build server and CLI binaries for Linux, macOS, Windows, and FreeBSD on amd64 and arm64. Docker images target amd64 and arm64.
 
