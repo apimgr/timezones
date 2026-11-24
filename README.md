@@ -107,7 +107,7 @@ curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(ident
 
 ## Development
 
-The timezone dataset and web assets are embedded in the Go binaries. Go commands run in the Docker toolchain configured by the Makefile. `make dev` builds the current platform, `make build` builds the release platforms, and `make test` runs Go vet, vulnerability checks, tests, and coverage enforcement. Run `./tests/run_tests.sh` for Docker-based binary and HTTP integration checks.
+The timezone dataset and web assets are embedded in the Go binaries. Go commands run in the Docker toolchain configured by the Makefile. `make dev` builds the current platform, `make build` builds the release platforms, and `make test` runs Go vet, vulnerability checks, tests, and coverage enforcement. Run `./tests/run_tests.sh` for Docker-based binary and HTTP integration checks. Run `./tests/incus.sh [systemd|openrc|all]` for full service lifecycle checks in disposable Debian/systemd and Alpine/OpenRC Incus containers; it defaults to both modes and requires an initialized Incus host and Docker for `make build`.
 
 GitHub Actions build server and CLI binaries for Linux, macOS, Windows, and FreeBSD on amd64 and arm64. Docker images target amd64 and arm64.
 
