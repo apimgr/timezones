@@ -1,8 +1,8 @@
 # Timezones API
 
-Timezones API is a public reference service for bundled world timezone records. It provides versioned REST and read-only GraphQL endpoints, an authenticated Streamable HTTP MCP endpoint, a server-rendered web interface, and a companion terminal client. Public timezone reads need no token; MCP and token-management operations use owner or operator credentials. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
+Timezones API is a public reference service for bundled world timezone records. The current build provides public, read-only versioned REST and GraphQL endpoints, a server-rendered web interface, and a companion terminal client. Owner/operator token management, MCP, and metrics routes are not implemented yet. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
 
-The embedded translation catalogs currently support English, Spanish, French, Arabic (right-to-left), German, and Italian. Browser requests can select a locale with `?lang=es`; the server also follows a saved language preference and the request's `Accept-Language` header.
+The embedded translation catalogs currently support English, Spanish, French, Arabic (right-to-left), German, and Italian. Browser requests can select a locale with `?lang=es`; otherwise the server checks a `lang` cookie and the request's `Accept-Language` header before falling back to English.
 
 [![GitHub Actions](https://github.com/apimgr/timezones/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/timezones/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/apimgr/timezones)](LICENSE.md) [![Documentation](https://readthedocs.org/projects/apimgr-timezones/badge/?version=latest)](https://apimgr-timezones.readthedocs.io/en/latest/)
 
@@ -38,7 +38,7 @@ On Windows, download the matching `.exe` files and add their directory to `%PATH
 
 ## Docker
 
-The production image listens on port 80 and includes Tor. The server manages its own isolated Tor process and enables the hidden service when the Tor binary is available.
+The production image listens on port 80 and includes Tor and I2P packages. The current server does not start or configure overlay network services.
 
 ```sh
 docker run --rm -p 8080:80 ghcr.io/apimgr/timezones:latest
@@ -71,7 +71,7 @@ The server loads `server.yml` and creates a default file on first start. Current
 
 ## API
 
-Public timezone REST reads and web pages require no token. Owner-token management, MCP, metrics, and operator-only routes use the authentication rules in the server documentation. The versioned REST API is rooted at `/api/v1`.
+The current build exposes public, read-only timezone endpoints; requests do not require a token. Owner/operator token management, MCP, metrics, and other protected routes are not implemented yet. The versioned REST API is rooted at `/api/v1`.
 
 | Method and path | Purpose |
 |---|---|
@@ -103,11 +103,11 @@ curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(ident
 
 - Full [ReadTheDocs documentation](https://apimgr-timezones.readthedocs.io/en/latest/)
 - [Source repository](https://github.com/apimgr/timezones)
-- Privacy and terms pages are served by each deployment at `/server/privacy` and `/server/terms`.
+- `/server` redirects to the about page; privacy and terms pages are served at `/server/privacy` and `/server/terms`.
 
 ## Development
 
-The timezone dataset and web assets are embedded in the Go binaries. Go commands run in the Docker toolchain configured by the Makefile. `make dev` builds the current platform, `make build` builds the release platforms, and `make test` runs Go vet, vulnerability checks, tests, and coverage enforcement. Run `./tests/run_tests.sh` for Docker-based binary and HTTP integration checks. Run `./tests/incus.sh [systemd|openrc|all]` for full service lifecycle checks in disposable Debian/systemd and Alpine/OpenRC Incus containers; it defaults to both modes and requires an initialized Incus host and Docker for `make build`.
+The timezone dataset and web assets are embedded in the Go binaries. Go commands run in the Docker toolchain configured by the Makefile. `make dev` builds the current platform, `make build` builds the release platforms, and `make test` runs Go vet, vulnerability checks, tests, and coverage enforcement. Run `./tests/run_tests.sh` for Docker-based binary and HTTP integration checks, and `./tests/e2e.sh` for browser checks using isolated Docker containers, Chromium, and the Go toolchain image. Both require Docker and image/network access. Run `./tests/incus.sh [systemd|openrc|all]` for full service lifecycle checks in disposable Debian/systemd and Alpine/OpenRC Incus containers; it defaults to both modes and requires an initialized Incus host and Docker for `make build`.
 
 GitHub Actions build server and CLI binaries for Linux, macOS, Windows, and FreeBSD on amd64 and arm64. Docker images target amd64 and arm64.
 
