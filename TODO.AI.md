@@ -30,6 +30,6 @@ This list records verified gaps between `AI.md`, `IDEA.md`, and the current impl
 
 - [ ] Complete the required container, Makefile, CI/release, supply-chain, community, and multi-provider files against AI.md PARTS 25–28 and GitHub requirements.
 - [ ] Complete required Docker, Incus, endpoint-coverage, browser E2E, and provider-workflow verification. `make test` passes the coverage gate; browser E2E and provider workflow verification remain outstanding.
-- [ ] Complete and verify `tests/incus.sh` and implement `tests/e2e.sh`. The Incus systemd/OpenRC harness is now in the worktree, but its required service/overlay/API contracts depend on unfinished server features; the chromedp E2E suite is still missing.
+- [ ] Complete and verify `tests/incus.sh` and `tests/e2e.sh`. Both harnesses now exist, but their AI.md-required service, overlay, owner-token, CLI, and browser scenarios are not all implemented; the Docker-tier runtime also needs diagnosis and the completed suites need final verification.
 - [ ] Verify and document timezone dataset provenance and redistribution terms plus third-party dependency licenses in `LICENSE.md`. (The dataset source/hash/license and scanned Go/vendor attributions are recorded in the working tree; remove only after that change is committed.)
 - [ ] Complete browser interaction, responsive/accessibility, and OpenAPI UI verification. The built server passed a container HTTP smoke check, and headless Chromium loaded the homepage and its local assets; the full visual/accessibility review remains outstanding.
