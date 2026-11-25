@@ -1,6 +1,6 @@
 # Timezones API
 
-Timezones API is a public reference service for bundled world timezone records. The current build provides public, read-only versioned REST and GraphQL endpoints, a server-rendered web interface, and a companion terminal client. Owner/operator token management, MCP, and metrics routes are not implemented yet. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
+Timezones API is a public reference service for bundled world timezone records. It provides public, read-only versioned REST and GraphQL endpoints, a server-rendered web interface, owner and linked bearer-token management, an authenticated MCP endpoint, and the `timezones-cli` companion client. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
 
 The embedded translation catalogs currently support English, Spanish, French, Arabic (right-to-left), German, and Italian. Browser requests can select a locale with `?lang=es`; otherwise the server checks a `lang` cookie and the request's `Accept-Language` header before falling back to English.
 
@@ -46,11 +46,12 @@ docker run --rm -p 8080:80 ghcr.io/apimgr/timezones:latest
 
 ## Client CLI
 
-The CLI looks up a timezone by display name, abbreviation, or IANA identifier. Use `--json` for machine-readable output.
+The CLI queries a configured Timezones API server by display name, abbreviation, or IANA identifier. It also provides list/search/current-time commands, interactive terminal and desktop interfaces, and `--output` formats for machine-readable output.
 
 ```sh
 timezones-cli America/New_York
-timezones-cli --json EST
+timezones-cli --output json EST
+timezones-cli --server http://127.0.0.1:8080 list --page 1
 timezones-cli --help
 timezones-cli --version
 ```
@@ -63,15 +64,15 @@ Run the server in the foreground:
 timezones --address 127.0.0.1 --port 8080
 ```
 
-The server creates a default `server.yml` in its configuration directory. `CONFIG_DIR`, `PORT`, and `ADDRESS` override the corresponding configuration or listener setting. The browser includes timezone list, search, random, offset, abbreviation, identifier and name lookups at `/timezones`, current-time views at `/timezones/current/{iana-id}`, dataset summaries at `/stats` and `/count`, plus server information and documentation pages.
+The server creates a default `server.yml` in its configuration directory. `CONFIG_DIR`, `PORT`, and `ADDRESS` override the corresponding configuration or listener setting. The browser includes timezone list, search, random, offset, abbreviation, identifier and name lookups at `/timezones`, current-time views at `/timezones/current/{iana-id}`, dataset summaries at `/stats` and `/count`, plus server information, preferences, security, contact, and documentation pages.
 
 ## Configuration
 
-The server loads `server.yml` and creates a default file on first start. Current overrides are `CONFIG_DIR`, `PORT`, and `ADDRESS`. The theme preference and request-protection state use first-party cookies. Requests are size-limited and rate-limited by client address.
+The server loads `server.yml` and its configured YAML drop-ins, creating the default configuration on first start. `CONFIG_DIR`, `DATA_DIR`, `PORT`, and `ADDRESS` select the configuration/data paths and listener settings. Owner credentials are managed through the token preferences page or API; the CLI accepts a token from its config, environment, `--token`, or `--token-file`. The theme preference and request-protection state use first-party cookies. Requests are size-limited and rate-limited by client address.
 
 ## API
 
-The current build exposes public, read-only timezone endpoints; requests do not require a token. Owner/operator token management, MCP, metrics, and other protected routes are not implemented yet. The versioned REST API is rooted at `/api/v1`.
+Public timezone reads do not require a token. Owner-token and linked-token operations use the API routes under `/api/v1/server/preferences/tokens`; MCP requires a valid Bearer token. The versioned REST API is rooted at `/api/v1`.
 
 | Method and path | Purpose |
 |---|---|
@@ -88,6 +89,11 @@ The current build exposes public, read-only timezone endpoints; requests do not 
 | `GET /api/v1/server/healthz` | Check service health |
 | `GET /api/v1/server/swagger` | Retrieve the OpenAPI JSON description |
 | `POST /api/v1/server/graphql` | Query timezone records, current time, or dataset statistics |
+| `GET /api/v1/server/preferences/tokens` | List the caller's token metadata |
+| `POST /api/v1/server/preferences/tokens` | Create a linked token |
+| `POST /api/v1/server/preferences/tokens/primary` | Create the caller's primary owner token |
+| `GET /api/autodiscover` | Discover server API and published CLI release metadata |
+| `GET /cli/binaries/{binary}` | Download a verified CLI release artifact when present |
 
 Add `.txt` to the list, search, random, statistics, and count endpoints for plain-text responses. Search queries are limited to 128 bytes. `/api/swagger` aliases the current OpenAPI document, and `/api/graphql` aliases the versioned GraphQL endpoint.
 
@@ -103,7 +109,9 @@ curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(ident
 
 - Full [ReadTheDocs documentation](https://apimgr-timezones.readthedocs.io/en/latest/)
 - [Source repository](https://github.com/apimgr/timezones)
-- `/server` redirects to the about page; privacy and terms pages are served at `/server/privacy` and `/server/terms`.
+- `/server` redirects to the about page; privacy, terms, security, security policy, acknowledgments, and contact pages are served under `/server`.
+- MCP is available at `/mcp`, `/api/mcp`, and `/api/v1/server/mcp`; all aliases require `Authorization: Bearer …`.
+- Security reporting starts at `/server/security`; see the [security policy](https://apimgr-timezones.readthedocs.io/en/latest/security/) and [deployment security.txt](https://apimgr-timezones.readthedocs.io/en/latest/integrations/#public-endpoints).
 
 ## Development
 
