@@ -84,6 +84,12 @@ The vendored files are from the official
 
 ## Embedded Licenses
 
+### GeoIP databases
+
+The ASN and country databases are from iptoasn.com / ip-location-db and are
+distributed under PDDL. The city databases are from DB-IP and are distributed
+under CC BY 4.0. Required attribution: <a href="https://db-ip.com/">IP Geolocation by DB-IP</a>.
+
 ### Timezone dataset
 
 The embedded `src/data/timezones.json` dataset is an exact copy of
