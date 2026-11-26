@@ -21,6 +21,8 @@ Download the latest server and CLI binaries from [GitHub Releases](https://githu
 | FreeBSD | amd64 | `timezones-freebsd-amd64` | `timezones-cli-freebsd-amd64` |
 | FreeBSD | arm64 | `timezones-freebsd-arm64` | `timezones-cli-freebsd-arm64` |
 
+Optional desktop CLI builds are published as `timezones-cli-gui-{os}-{arch}` for Linux, macOS, and Windows. They are dynamically linked and intended for local desktop sessions. The standard CLI binaries remain static and portable; their automatic interactive mode uses the terminal.
+
 For Linux amd64:
 
 ```sh
@@ -46,7 +48,7 @@ docker run --rm -p 8080:80 ghcr.io/apimgr/timezones:latest
 
 ## Client CLI
 
-The CLI queries a configured Timezones API server by display name, abbreviation, or IANA identifier. It also provides list/search/current-time commands, interactive terminal and desktop interfaces, and `--output` formats for machine-readable output.
+The CLI queries a configured Timezones API server by display name, abbreviation, or IANA identifier. It also provides list/search/current-time commands, an interactive terminal interface, and `--output` formats for machine-readable output. Optional `timezones-cli-gui-{os}-{arch}` builds provide the desktop interface on Linux, macOS, and Windows.
 
 ```sh
 timezones-cli America/New_York
