@@ -9,7 +9,7 @@ This list records verified gaps between `AI.md`, `IDEA.md`, and the current impl
 - [x] Provide a bundled Swagger UI at `/server/docs/swagger`. (Implemented in the working tree; retain until committed.)
 - [x] Add production, development, and automated-test Compose files under `docker/`; remove the obsolete root Compose files. (Implemented in the working tree; retain until committed.)
 - [x] Add the Docker binary/API integration runner and make its build output mount usable with a project-selected `BINDIR`. (Implemented in the working tree; the runner still needs full AI.md route/auth/overlay coverage; retain until committed.)
-- [x] Align Makefile build metadata and enforce the 60% Go coverage floor. (Implemented in the working tree; the latest recorded `make test` result was 70.1%; rerun after the current edits and retain until committed.)
+- [x] Align Makefile build metadata and enforce the 60% Go coverage floor. (The gate is present; the latest `make test` runs pass vet, vulnerability scanning, and individual tests but fail the 60% total coverage requirement. Increase coverage before resolving this item; retain until committed.)
 - [x] Complete the GitHub community policy files. `.github/SECURITY.md` now states that only the latest release is supported, acknowledges reports within 48 hours, targets 14 calendar days for critical fixes, and coordinates disclosure normally within 90 days; retain until this alignment work is committed.
 - [ ] Complete content negotiation for browser, text browser, HTTP tool, and API clients across all public routes.
 - [x] Add browser pages for list/search/random/filter/lookup timezone routes and dataset statistics/count. (Implemented in the working tree; retain until committed.)
