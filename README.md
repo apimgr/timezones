@@ -119,6 +119,9 @@ your client, replace `https://YOUR_SERVER` with your deployment URL.
 
 OpenAPI JSON is available at `/api/v1/server/swagger`; interactive docs are at
 `/server/docs/swagger`. GraphQL has a query explorer at `/server/docs/graphql`.
+API routes default to JSON and support plain text with `.txt` or
+`Accept: text/plain`; HTTP tools receive text by default. Browser routes return
+server-rendered HTML, while text browsers receive HTML without JavaScript.
 See the [API reference](docs/api.md) for routes, aliases, formats, and examples.
 
 ## Other
