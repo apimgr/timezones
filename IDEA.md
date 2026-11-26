@@ -117,3 +117,5 @@ These are the timezone-domain and GraphQL routes defined by this project. Public
 | GET | `/api/v1/stats.txt` | Public | Return aggregate dataset statistics as plain text. |
 | GET | `/api/v1/count` | Public | Return the record count in the standard JSON envelope. |
 | GET | `/api/v1/count.txt` | Public | Return the record count as plain text. |
+| GET | `/api/v1/server/graphql?query={document}` | Public | Execute a read-only GraphQL query; accepts optional JSON-object `variables` and `operationName` query parameters. |
+| POST | `/api/v1/server/graphql` | Public | Execute a read-only GraphQL query with a JSON request body containing `query` and optional `variables` and `operationName`. |

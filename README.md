@@ -88,14 +88,14 @@ Public timezone reads do not require a token. Owner-token and linked-token opera
 | `GET /api/v1/stats` and `/api/v1/count` | Return dataset statistics or record count |
 | `GET /api/v1/server/healthz` | Check service health |
 | `GET /api/v1/server/swagger` | Retrieve the OpenAPI JSON description |
-| `POST /api/v1/server/graphql` | Query timezone records, current time, or dataset statistics |
+| `GET` and `POST /api/v1/server/graphql` | Query timezone records, current time, or dataset statistics |
 | `GET /api/v1/server/preferences/tokens` | List the caller's token metadata |
 | `POST /api/v1/server/preferences/tokens` | Create a linked token |
 | `POST /api/v1/server/preferences/tokens/primary` | Create the caller's primary owner token |
 | `GET /api/autodiscover` | Discover server API and published CLI release metadata |
 | `GET /cli/binaries/{binary}` | Download a verified CLI release artifact when present |
 
-Add `.txt` to the list, search, random, statistics, and count endpoints for plain-text responses. Search queries are limited to 128 bytes. `/api/swagger` aliases the current OpenAPI document, and `/api/graphql` aliases the versioned GraphQL endpoint.
+Add `.txt` to the list, search, random, statistics, and count endpoints for plain-text responses. Search queries are limited to 128 bytes. `/api/swagger` aliases the current OpenAPI document, and `/api/graphql` aliases the versioned GraphQL endpoint. GraphQL supports POST JSON requests and GET requests with `query`, optional JSON-object `variables`, and optional `operationName` query parameters; a GET without `query` returns usage text.
 
 JSON responses use an `ok` and `data` envelope. List and search responses include page, limit, total, and page-count metadata. The default page size is 250.
 
@@ -103,6 +103,7 @@ JSON responses use an `ok` and `data` envelope. List and search responses includ
 curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/search?q=America%2FNew_York'
 curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/current/America/New_York'
 curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(identifier: \"America/New_York\") { value abbr utc } }"}' http://127.0.0.1:8080/api/v1/server/graphql
+curl -q -G -LSsf --data-urlencode 'query={ timezone(identifier: "America/New_York") { value abbr utc } }' http://127.0.0.1:8080/api/v1/server/graphql
 ```
 
 ## Other
