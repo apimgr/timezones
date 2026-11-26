@@ -38,7 +38,7 @@ On Windows, download the matching `.exe` files and add their directory to `%PATH
 
 ## Docker
 
-The production image listens on port 80 and includes Tor and I2P packages. The current server does not start or configure overlay network services.
+The production image listens on port 80 and includes Tor and I2P packages. When `tor` is available, the server starts an isolated Tor hidden service. I2P is enabled by default in application containers and can be enabled or disabled with `I2P_ENABLED=true|false` or `--i2p[=true|false]`. Both services use separate loopback listeners; their addresses are shown by health and discovery only when configured for exposure.
 
 ```sh
 docker run --rm -p 8080:80 ghcr.io/apimgr/timezones:latest
