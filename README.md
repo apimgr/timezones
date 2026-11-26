@@ -138,9 +138,15 @@ Development and release builds use the Docker Go toolchain configured by the
 Makefile. `make dev` builds the current platform, `make build` builds release
 targets, and `make test` runs the configured Go checks. `./tests/run_tests.sh`
 checks binaries and HTTP behavior in Docker; `./tests/e2e.sh` runs browser
-checks. `./tests/incus.sh [systemd|openrc|all]` exercises service lifecycle in
-disposable Incus containers. See [Development](docs/development.md) for
-prerequisites and resource requirements.
+checks. `./tests/docker.sh` reuses executable server and CLI binaries supplied
+via `BINDIR`, or builds them with the Docker toolchain otherwise; it checks
+operator and owner/linked-token authorization, authenticated CLI reads and
+token create/list/rename/revoke operations, private secret storage, debug-route
+authorization, and Tor/I2P health and bootstrap state. Set `TOR_WAIT`
+and `I2P_WAIT` to change overlay startup ceilings, or `REQUIRE_OVERLAY=1` to
+make unavailable overlays fail the run. `./tests/incus.sh [systemd|openrc|all]`
+exercises service lifecycle in disposable Incus containers. See
+[Development](docs/development.md) for prerequisites and resource requirements.
 
 ## Disclaimer
 
