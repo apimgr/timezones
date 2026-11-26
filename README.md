@@ -94,6 +94,8 @@ container.
 The CLI profile is `cli.yml` in the user configuration directory. Set the
 server with `--server` or `TIMEZONES_SERVER_PRIMARY`. For available settings,
 environment inputs, and flags, see the [configuration reference](docs/configuration.md).
+`server.mode` defaults to `production`; an empty `server.port` is selected at
+startup (an unused host port, or port 80 in an application container).
 
 ## API
 
