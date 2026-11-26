@@ -1,131 +1,156 @@
 # Timezones API
 
-Timezones API is a public reference service for bundled world timezone records. It provides public, read-only versioned REST and GraphQL endpoints, a server-rendered web interface, owner and linked bearer-token management, an authenticated MCP endpoint, and the `timezones-cli` companion client. Record offsets and daylight-saving flags describe the static dataset; the current-time endpoint uses IANA timezone rules at request time.
+[![CI](https://github.com/apimgr/timezones/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/timezones/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/apimgr/timezones)](https://github.com/apimgr/timezones/releases) [![License](https://img.shields.io/github/license/apimgr/timezones)](LICENSE.md) [![Documentation](https://readthedocs.org/projects/apimgr-timezones/badge/?version=latest)](https://apimgr-timezones.readthedocs.io/)
 
-The embedded translation catalogs currently support English, Spanish, French, Arabic (right-to-left), German, and Italian. Browser requests can select a locale with `?lang=es`; otherwise the server checks a `lang` cookie and the request's `Accept-Language` header before falling back to English.
+## About
 
-[![GitHub Actions](https://github.com/apimgr/timezones/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/timezones/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/apimgr/timezones)](LICENSE.md) [![Documentation](https://readthedocs.org/projects/apimgr-timezones/badge/?version=latest)](https://apimgr-timezones.readthedocs.io/en/latest/)
+Timezones API serves a bundled reference dataset of timezone display names,
+abbreviations, UTC offsets, daylight-saving flags, labels, and IANA identifiers.
+It provides versioned REST and read-only GraphQL APIs, a server-rendered web
+interface, and the `timezones-cli` companion client. Dataset offsets and flags
+are static; current local time is calculated from IANA timezone rules.
 
-## Install
+## Features
 
-Download the latest server and CLI binaries from [GitHub Releases](https://github.com/apimgr/timezones/releases/latest). Release binaries are built for these platforms:
+- Public timezone search, lookup, filtering, random selection, and dataset statistics
+- Current-time lookup by IANA timezone identifier
+- Server-rendered, mobile-friendly pages and an installable PWA shell
+- Owner and linked bearer-token management without user accounts
+- Read-only GraphQL API and query explorer
+- Authenticated Streamable HTTP MCP endpoint
+- Tor hidden service when a Tor binary is available; optional I2P eepsite
+- Server and CLI interfaces in English, Spanish, French, German, Italian, and Arabic
 
-| Platform | Architecture | Server binary | Client binary |
-|---|---|---|---|
-| Linux | amd64 | `timezones-linux-amd64` | `timezones-cli-linux-amd64` |
-| Linux | arm64 | `timezones-linux-arm64` | `timezones-cli-linux-arm64` |
-| macOS | Intel (amd64) | `timezones-darwin-amd64` | `timezones-cli-darwin-amd64` |
-| macOS | Apple Silicon (arm64) | `timezones-darwin-arm64` | `timezones-cli-darwin-arm64` |
-| Windows | amd64 | `timezones-windows-amd64.exe` | `timezones-cli-windows-amd64.exe` |
-| Windows | arm64 | `timezones-windows-arm64.exe` | `timezones-cli-windows-arm64.exe` |
-| FreeBSD | amd64 | `timezones-freebsd-amd64` | `timezones-cli-freebsd-amd64` |
-| FreeBSD | arm64 | `timezones-freebsd-arm64` | `timezones-cli-freebsd-arm64` |
+## Production
 
-Optional desktop CLI builds are published as `timezones-cli-gui-{os}-{arch}` for Linux, macOS, and Windows. They are dynamically linked and intended for local desktop sessions. The standard CLI binaries remain static and portable; their automatic interactive mode uses the terminal.
+### Docker Compose
 
-For Linux amd64:
+The provided Compose setup runs the API and Valkey cache. It stores configuration
+and data in `docker/volumes/` and binds the published port to Docker's bridge
+gateway as configured in the compose file.
 
 ```sh
-curl -q -LSsf https://github.com/apimgr/timezones/releases/latest/download/timezones-linux-amd64 -o /usr/local/bin/timezones && chmod +x /usr/local/bin/timezones
-curl -q -LSsf https://github.com/apimgr/timezones/releases/latest/download/timezones-cli-linux-amd64 -o /usr/local/bin/timezones-cli && chmod +x /usr/local/bin/timezones-cli
+docker compose -f docker/docker-compose.yml up -d
 ```
 
-On macOS, choose the `darwin-amd64` or `darwin-arm64` assets, install them in a directory on `PATH`, and remove quarantine if required by Gatekeeper:
+The production image listens on port 80 and includes `tor` and `i2pd`. Tor is
+managed automatically when its binary is available. I2P is enabled by default
+in an application container; set `I2P_ENABLED=true|false` or use `--i2p` to
+override the setting. Overlay addresses appear in discovery only when the
+respective `server.tor.expose` or `server.i2p.expose` setting is enabled.
+
+### Binary
+
+Download release assets from [GitHub Releases](https://github.com/apimgr/timezones/releases).
+The server and CLI are available for Linux, macOS, Windows, and FreeBSD on
+amd64 and arm64. Optional desktop CLI builds are also published for Linux,
+macOS, and Windows.
+
+For a local Linux amd64 installation:
 
 ```sh
-xattr -d com.apple.quarantine /usr/local/bin/timezones /usr/local/bin/timezones-cli 2>/dev/null || true
+curl -q -LSsf -o timezones https://github.com/apimgr/timezones/releases/latest/download/timezones-linux-amd64
+chmod +x timezones
+sudo install -m 0755 timezones /usr/local/bin/timezones
 ```
 
-On Windows, download the matching `.exe` files and add their directory to `%PATH%`.
+### systemd
 
-## Docker
-
-The production image listens on port 80 and includes Tor and I2P packages. When `tor` is available, the server starts an isolated Tor hidden service. I2P is enabled by default in application containers and can be enabled or disabled with `I2P_ENABLED=true|false` or `--i2p[=true|false]`. Both services use separate loopback listeners; their addresses are shown by health and discovery only when configured for exposure.
+After installing `timezones` on a Linux host managed by systemd, register and
+start the service:
 
 ```sh
-docker run --rm -p 8080:80 ghcr.io/apimgr/timezones:latest
+sudo timezones --service install
+sudo systemctl enable --now timezones
 ```
 
-## Client CLI
+## Client
 
-The CLI queries a configured Timezones API server by display name, abbreviation, or IANA identifier. It also provides list/search/current-time commands, an interactive terminal interface, and `--output` formats for machine-readable output. Optional `timezones-cli-gui-{os}-{arch}` builds provide the desktop interface on Linux, macOS, and Windows.
+The companion executable is `timezones-cli`. Install the matching release
+asset, then set the server URL with `--server` or in its `cli.yml` profile.
+This project does not define an official server URL; use your deployment's URL.
 
 ```sh
-timezones-cli America/New_York
-timezones-cli --output json EST
-timezones-cli --server http://127.0.0.1:8080 list --page 1
+timezones-cli --server https://YOUR_SERVER search America/New_York
+timezones-cli --server https://YOUR_SERVER list --page 1
 timezones-cli --help
-timezones-cli --version
 ```
 
-## Server
-
-Run the server in the foreground:
-
-```sh
-timezones --address 127.0.0.1 --port 8080
-```
-
-The server creates a default `server.yml` in its configuration directory. `CONFIG_DIR`, `PORT`, and `ADDRESS` override the corresponding configuration or listener setting. The browser includes timezone list, search, random, offset, abbreviation, identifier and name lookups at `/timezones`, current-time views at `/timezones/current/{iana-id}`, dataset summaries at `/stats` and `/count`, plus server information, preferences, security, contact, and documentation pages.
+The client also supports `current`, `utc`, `offset`, `abbr`, `value`, `random`,
+`stats`, `count`, token management, table/JSON/YAML/plain/CSV output, and an
+interactive terminal interface. Optional `timezones-cli-gui-{os}-{arch}` builds
+provide a desktop interface.
 
 ## Configuration
 
-The server loads `server.yml` and its configured YAML drop-ins, creating the default configuration on first start. `CONFIG_DIR`, `DATA_DIR`, `PORT`, and `ADDRESS` select the configuration/data paths and listener settings. Owner credentials are managed through the token preferences page or API; the CLI accepts a token from its config, environment, `--token`, or `--token-file`. The theme preference and request-protection state use first-party cookies. Requests are size-limited and rate-limited by client address.
+The server generates `server.yml` on first start and reads area settings from
+`yaml.d/` and credentials from `secrets.yml`. It watches those files for
+changes. Use `CONFIG_DIR` or `--config` to choose the configuration directory,
+`DATA_DIR` or `--data` for application data, `PORT` or `--port` for the HTTP
+port, and `LISTEN` or `--address` for the listener address. With no port set,
+the server chooses an unused port on a host and uses port 80 in an application
+container.
+
+The CLI profile is `cli.yml` in the user configuration directory. Set the
+server with `--server` or `TIMEZONES_SERVER_PRIMARY`. For available settings,
+environment inputs, and flags, see the [configuration reference](docs/configuration.md).
 
 ## API
 
-Public timezone reads do not require a token. Owner-token and linked-token operations use the API routes under `/api/v1/server/preferences/tokens`; MCP requires a valid Bearer token. The versioned REST API is rooted at `/api/v1`.
+The versioned REST API is rooted at `/api/v1`. Public timezone reads do not
+require a token. Token management requires the owner token after primary-token
+bootstrap. MCP and protected metrics use bearer credentials. When configuring
+your client, replace `https://YOUR_SERVER` with your deployment URL.
 
 | Method and path | Purpose |
 |---|---|
-| `GET /api/v1/timezones` | List records with `page`/`limit`; optional `offset` and `isdst` filters |
-| `GET /api/v1/timezones.json` | Return the embedded JSON dataset |
-| `GET /api/v1/timezones/search?q=...` | Search by name, description, abbreviation, or IANA identifier |
-| `GET /api/v1/timezones/offset/{offset}` | Filter by UTC offset in hours |
-| `GET /api/v1/timezones/abbr/{abbr}` | Look up an abbreviation |
+| `GET /api/v1/timezones` | List records with pagination and optional offset/DST filters |
+| `GET /api/v1/timezones/search?q=...` | Search timezone names and identifiers |
 | `GET /api/v1/timezones/utc/{iana-id}` | Look up an IANA identifier |
-| `GET /api/v1/timezones/value/{name}` | Look up a display name |
-| `GET /api/v1/timezones/random` | Return one random record |
-| `GET /api/v1/timezones/current/{iana-id}` | Return the current local time and UTC offset |
-| `GET /api/v1/stats` and `/api/v1/count` | Return dataset statistics or record count |
-| `GET /api/v1/server/healthz` | Check service health |
-| `GET /api/v1/server/swagger` | Retrieve the OpenAPI JSON description |
-| `GET` and `POST /api/v1/server/graphql` | Query timezone records, current time, or dataset statistics |
-| `GET /api/v1/server/preferences/tokens` | List the caller's token metadata |
-| `POST /api/v1/server/preferences/tokens` | Create a linked token |
-| `POST /api/v1/server/preferences/tokens/primary` | Create the caller's primary owner token |
-| `GET /api/autodiscover` | Discover server API and published CLI release metadata |
-| `GET /cli/binaries/{binary}` | Download a verified CLI release artifact when present |
+| `GET /api/v1/timezones/current/{iana-id}` | Return current local time and offset |
+| `GET /api/v1/timezones/random` | Return a random record |
+| `GET /api/v1/stats` and `/api/v1/count` | Dataset statistics and count |
+| `GET /api/v1/server/healthz` | Service health |
+| `GET` or `POST /api/v1/server/graphql` | Read-only timezone and statistics queries |
+| `POST /api/v1/server/preferences/tokens` | Create a linked token (owner token required) |
+| `GET /api/autodiscover` | Discover API version and CLI release metadata |
 
-Add `.txt` to the list, search, random, statistics, and count endpoints for plain-text responses. Search queries are limited to 128 bytes. `/api/swagger` aliases the current OpenAPI document, and `/api/graphql` aliases the versioned GraphQL endpoint. GraphQL supports POST JSON requests and GET requests with `query`, optional JSON-object `variables`, and optional `operationName` query parameters; a GET without `query` returns usage text.
-
-JSON responses use an `ok` and `data` envelope. List and search responses include page, limit, total, and page-count metadata. The default page size is 250.
-
-```sh
-curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/search?q=America%2FNew_York'
-curl -q -LSsf 'http://127.0.0.1:8080/api/v1/timezones/current/America/New_York'
-curl -q -LSsf -H 'Content-Type: application/json' -d '{"query":"{ timezone(identifier: \"America/New_York\") { value abbr utc } }"}' http://127.0.0.1:8080/api/v1/server/graphql
-curl -q -G -LSsf --data-urlencode 'query={ timezone(identifier: "America/New_York") { value abbr utc } }' http://127.0.0.1:8080/api/v1/server/graphql
-```
+OpenAPI JSON is available at `/api/v1/server/swagger`; interactive docs are at
+`/server/docs/swagger`. GraphQL has a query explorer at `/server/docs/graphql`.
+See the [API reference](docs/api.md) for routes, aliases, formats, and examples.
 
 ## Other
 
-- Full [ReadTheDocs documentation](https://apimgr-timezones.readthedocs.io/en/latest/)
+- [Full documentation](https://apimgr-timezones.readthedocs.io/)
 - [Source repository](https://github.com/apimgr/timezones)
-- `/server` redirects to the about page; privacy, terms, security, security policy, acknowledgments, and contact pages are served under `/server`.
-- MCP is available at `/mcp`, `/api/mcp`, and `/api/v1/server/mcp`; all aliases require `Authorization: Bearer …`.
-- Security reporting starts at `/server/security`; see the [security policy](https://apimgr-timezones.readthedocs.io/en/latest/security/) and [deployment security.txt](https://apimgr-timezones.readthedocs.io/en/latest/integrations/#public-endpoints).
+- `/mcp`, `/api/mcp`, and `/api/v1/server/mcp` expose the authenticated MCP endpoint.
+- `/.well-known/security.txt`, `/server/security`, and `/server/contact` describe and accept security reports.
+- The bundled dataset is static; this service does not publish future DST-transition schedules.
 
 ## Development
 
-The timezone dataset and web assets are embedded in the Go binaries. Go commands run in the Docker toolchain configured by the Makefile. `make dev` builds the current platform, `make build` builds the release platforms, and `make test` runs Go vet, vulnerability checks, tests, and coverage enforcement. Run `./tests/run_tests.sh` for Docker-based binary and HTTP integration checks, and `./tests/e2e.sh` for browser checks using isolated Docker containers, Chromium, and the Go toolchain image. Both require Docker and image/network access. Run `./tests/incus.sh [systemd|openrc|all]` for full service lifecycle checks in disposable Debian/systemd and Alpine/OpenRC Incus containers; it defaults to both modes and requires an initialized Incus host and Docker for `make build`.
-
-GitHub Actions build server and CLI binaries for Linux, macOS, Windows, and FreeBSD on amd64 and arm64. Docker images target amd64 and arm64.
+Development and release builds use the Docker Go toolchain configured by the
+Makefile. `make dev` builds the current platform, `make build` builds release
+targets, and `make test` runs the configured Go checks. `./tests/run_tests.sh`
+checks binaries and HTTP behavior in Docker; `./tests/e2e.sh` runs browser
+checks. `./tests/incus.sh [systemd|openrc|all]` exercises service lifecycle in
+disposable Incus containers. See [Development](docs/development.md) for
+prerequisites and resource requirements.
 
 ## Disclaimer
 
-This software is provided “as is” without warranty of any kind. Timezone data may not reflect current civil-time rules; verify time-critical decisions against authoritative sources. No software is guaranteed to be free of vulnerabilities. Evaluate it before production use.
+This software is provided "as is" without warranty of any kind. Use it at your
+own risk.
+
+- **No warranty:** The authors are not responsible for damages, data loss, or other issues arising from use of this software.
+- **Data accuracy:** Timezone data may not reflect current civil-time rules. Verify time-critical decisions against authoritative sources.
+- **Third-party services:** External service terms apply when a deployment configures those services.
+- **Security:** No software is guaranteed to be free of vulnerabilities.
+- **Production use:** Evaluate the software and deployment before production use.
 
 ## License
 
-Project code is MIT licensed. The embedded timezone dataset is copied from [dmfilipenko/timezones.json](https://github.com/dmfilipenko/timezones.json) at commit `658abf632bae9c0313360702e3018024eb88a874` and is separately attributed under its MIT license in [LICENSE.md](LICENSE.md).
+Project code is MIT licensed. The embedded timezone dataset is copied from
+[`dmfilipenko/timezones.json`](https://github.com/dmfilipenko/timezones.json)
+at commit `658abf632bae9c0313360702e3018024eb88a874`; its separate MIT license
+and attribution are included in [LICENSE.md](LICENSE.md).
