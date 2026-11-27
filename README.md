@@ -112,7 +112,7 @@ your client, replace `https://YOUR_SERVER` with your deployment URL.
 | `GET /api/v1/timezones/current/{iana-id}` | Return current local time and offset |
 | `GET /api/v1/timezones/random` | Return a random record |
 | `GET /api/v1/stats` and `/api/v1/count` | Dataset statistics and count |
-| `GET /api/v1/server/healthz` | Service health |
+| `GET /api/v1/server/healthz` | Bare JSON service health document (project/build/runtime, features, component checks, and aggregate stats) |
 | `GET` or `POST /api/v1/server/graphql` | Read-only timezone and statistics queries |
 | `POST /api/v1/server/preferences/tokens` | Create a linked token (owner token required) |
 | `GET /api/autodiscover` | Discover API version and CLI release metadata |
