@@ -267,10 +267,13 @@ flag, or release build.
 | `cache.enabled` / `cache.ttl` / `cache.max_size` | `true` / `5m` / `100MB` |
 | `debug` | `false` |
 | `update.auto` / `update.check_interval` / `update.channel` | `false` / `per_invocation` / `stable` |
-| `defaults.lang` / `defaults.output` / `defaults.limit` | `auto` / `table` / `20` |
+| `defaults.lang` / `defaults.limit` | `auto` / `20` |
 
 The CLI creates config, data, cache, and log directories with mode `0700` and
 the profile and log file with mode `0600` on Unix-like systems.
+`output.pager: auto` uses `less` or `more` when output exceeds the terminal
+height; `always` uses a pager whenever stdout is a terminal, and `never` writes
+directly. If neither pager is installed, output goes directly to stdout.
 The CLI checks the selected server's published release on each invocation.
 `update.auto: true` installs an available update without prompting only for
 noninteractive runs; interactive runs prompt, while `--update yes` installs
