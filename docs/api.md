@@ -69,6 +69,15 @@ is registered.
 | GET, POST | `/api/v1/server/graphql` | Read-only GraphQL queries |
 | POST | `/api/v1/server/mcp` | MCP Streamable HTTP endpoint; bearer token required |
 
+About and Terms responses contain `title`, raw `content`, and `format`. The
+content is the request-language source after configured placeholders have been
+replaced; HTML is returned as source and is never returned as rendered page
+markup. Operator content comes from `server.branding.content.about` and
+`server.branding.content.terms` in `yaml.d/branding.yml`. Formats are
+`markdown`, `html`, or `text`. Without a usable override, About uses the
+project description and Terms uses the built-in terms text; both default to
+`markdown`.
+
 Metrics are protected by their service-specific bearer token unless the
 operator enables unauthenticated metrics. The `service` value is `prometheus`,
 `grafana`, or `loki`.

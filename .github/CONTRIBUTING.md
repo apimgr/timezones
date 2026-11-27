@@ -5,7 +5,7 @@
 Go builds and tests use the Docker toolchain configured by the Makefile. Do not install Go on the host for this project.
 
 ```sh
-make dev
+make build
 make test
 ./tests/run_tests.sh
 DOCS_TEMP_ROOT="${TMPDIR:-/tmp}/apimgr"

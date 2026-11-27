@@ -36,12 +36,14 @@ MTA-STS are not enabled by this project.
 
 The server limits request targets and bodies, adds CSP and browser security
 headers, and trusts forwarded client-address headers only when the immediate
-peer is a private or loopback address. Its general rate limiter currently
-allows 240 requests per minute per client address; strict token operations
-have a separate limit. This general limiter is fixed in code. The configured
-`server.rate_limit.*` values are described in the
-[configuration reference](configuration.md), but are not currently used to
-set endpoint-class limits.
+peer is a private or loopback address. Rate limiting is always on and applies
+the configured read, write, health, strict-operation, failed-authentication,
+and global-burst limits. Anonymous requests are keyed by client IP; requests
+with a valid Bearer token are keyed by token, while failed authentication is
+always keyed by IP. Counters are persisted in `server.db` unless Valkey or
+Redis is configured. If the selected counter backend is unavailable, requests
+are rejected at the limit rather than allowed through. See the
+[configuration reference](configuration.md) for defaults.
 
 The server can enforce its configured IP/domain blocklist and GeoIP policy.
 `server.security.allowlist` entries bypass those checks and rate limiting.

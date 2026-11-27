@@ -17,7 +17,8 @@ area settings; and `secrets.yml` for credentials. Drop-ins are merged in
 filename order, then secrets are merged. The loader applies built-in defaults
 for omitted settings. Environment variables only override the settings and
 phases listed below; they are not a general `PROJECT_SECTION_KEY` override
-mechanism. Invalid drop-in entries are warned about and skipped.
+mechanism. Invalid values are warned about and replaced with their defaults;
+unparseable files are ignored while their last good copy remains active.
 String values also support environment interpolation as `${NAME}` or
 `${NAME:-fallback}`; an unset variable without a fallback expands to empty.
 
@@ -99,8 +100,12 @@ String values also support environment interpolation as `${NAME}` or
 
 The two bucket settings are lists of numeric histogram boundaries. Rate-limit
 window values are seconds. Empty token settings do not create credentials.
-The loader supplies the blocklist defaults shown above. The allowlist defaults
-to an empty list; entries use `{cidr, description}` objects.
+The rate limiter is always enabled. Counters are persisted in `server.db` for
+the default `memory` cache and for `none`; a configured Valkey or Redis cache
+uses its external counter backend. If that backend is unavailable, requests
+remain rate limited and cache health becomes degraded. The loader supplies the
+blocklist defaults shown above. The allowlist defaults to an empty list;
+entries use `{cidr, description}` objects.
 
 ### Overlay networks
 
@@ -130,7 +135,7 @@ default to enabled inside application containers. `--i2p` takes precedence
 over the environment and file setting. Tor has no enable switch: the hidden
 service starts when a Tor binary is found. Both managers start asynchronously;
 their status appears in health responses. Exposure flags control whether the
-addresses are included in autodiscovery.
+addresses appear in autodiscovery, health, Help, and the shared footer.
 
 ### Tracking and privacy
 
@@ -244,6 +249,15 @@ Schedules use cron expressions.
 | `web.robots.allow` / `deny` | `[/, /api]` / `[/debug]` |
 | `data.cve.api_key` | `""` |
 
+Operator page content belongs in the normal drop-in file
+`yaml.d/branding.yml`, under `server.branding.content`; it is not a generated
+`server.yml` setting. `about`, `privacy`, and `terms` accept `md` (the default),
+`html`, or `txt` with either a single body or a language map containing an
+optional `default`. `header` and `footer` accept sanitized HTML only. About and
+Privacy extend their built-in pages, Terms replaces its built-in page, and
+Footer branding appears above the always-present application footer. A
+whitespace-only Footer body suppresses the branding block.
+
 ## CLI profile defaults
 
 `timezones-cli` creates `cli.yml` under the user configuration directory.
@@ -287,17 +301,23 @@ currently publishes one CLI release channel, so `update.channel` must remain
 
 | Variable | Effect and scope |
 |---|---|
+| `NO_COLOR` | Disables ANSI color output when set and non-empty. |
+| `TERM` | `TERM=dumb` disables ANSI escapes and selects CLI mode; explicit `--color=yes` can re-enable color sequences. |
+| `DOMAIN` | FQDN override; highest-priority input for hostname resolution. |
+| `PORT` | Listener override on every startup, after `--port` and before the early `server.port` config value. |
+| `LISTEN` | Listener address override on every startup, after `--address` and before the early `server.address` config value. |
 | `MODE` | Overrides `server.mode` on configuration load. |
+| `DEBUG` | Enables the debug flag when truthy; `--debug` takes precedence. It is independent of `MODE`. |
+| `PID_FILE` | PID file path; `--pid` takes precedence, then this variable, then the platform default. |
+| `I2P_ENABLED` | Enables or disables I2P; `--i2p` takes precedence. |
 | `SMTP_HOST` / `SMTP_USERNAME` / `SMTP_PASSWORD` | Overrides corresponding SMTP fields on configuration load. |
 | `SMTP_FROM_NAME` / `SMTP_FROM_EMAIL` | Overrides `server.notifications.email.from.name` / `server.notifications.email.from.email` on configuration load. |
 | `SMTP_TLS` | Overrides `server.notifications.email.smtp.tls` on configuration load. |
 | `SMTP_PORT` | Overrides SMTP port only when it parses as an integer. |
-| `PORT` / `LISTEN` | Seeds `server.port` / `server.address` during first-run setup; also supplies the listener when CLI flags have not supplied values. |
 | `I2P_ENABLED` | Explicit I2P enable/disable setting; a valid `--i2p` flag overrides it. |
 | `APPLICATION_NAME` / `APPLICATION_TAGLINE` | On first run seed `server.branding.title` / `server.branding.description`. |
 | `DATABASE_URL` / `CACHE_URL` | On first run seed connection URLs if not already configured. Existing saved values win. |
 | `DATABASE_DRIVER` | First-run driver selection when applicable; URL scheme takes precedence when it identifies the driver. |
-| `DOMAIN` | Public FQDN and allowed-domain input used by URL and contact handling. |
 | `CONFIG_DIR` / `DATA_DIR` / `CACHE_DIR` / `LOG_DIR` / `BACKUP_DIR` | Override corresponding application directories. |
 | `DATABASE_DIR` | Override the database directory when resolving the database location. |
 | `XDG_CONFIG_HOME` / `XDG_DATA_HOME` / `XDG_CACHE_HOME` | Unix user-directory bases when the corresponding explicit directory is not set. |
@@ -383,25 +403,3 @@ Explicitly read variables are:
 | `list --isdst {true,false}` | Filter daylight-saving records |
 | `token create --name` / `--expires` | Linked-token name and optional expiry (`7d`, `30d`, `90d`, `1y`, `never`) |
 | `token revoke --confirm` | Confirmation text for revoking the primary token |
-
-## AI.md configuration gaps
-
-The server currently supports the Tor and I2P configuration tables above.
-The following AI.md-required settings or behaviors are not present in the
-loader default tree or were not found in the current implementation:
-
-- AI.md PART 11's `server.security.blocked_ips` and
-  `server.security.abuse_detection.*` settings are absent. The current code
-  supports the separate `server.security.allowlist` and source-based
-  `server.security.blocklists` settings documented above.
-- AI.md PART 12's general rate-limit class and counter behavior is not
-  implemented as specified. The loader defines `server.rate_limit.*` defaults,
-  but the general request limiter remains a fixed 240 requests per minute per
-  client address; it does not select limits from those settings or key the
-  general quota by Bearer token.
-- AI.md configuration areas such as `server.csrf`, `server.url_detection`,
-  `server.compliance`, `server.tokens`, `server.restore`, and top-level `cli`
-  do not have built-in leaf defaults in the current loader. Although the
-  loader preserves some of these sections in the merged configuration, source
-  usage was not confirmed for every AI.md-required setting. Do not assume an
-  undocumented leaf is consumed just because a YAML file accepts it.

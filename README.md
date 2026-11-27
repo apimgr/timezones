@@ -19,6 +19,7 @@ are static; current local time is calculated from IANA timezone rules.
 - Read-only GraphQL API and query explorer
 - Authenticated Streamable HTTP MCP endpoint
 - Tor hidden service when a Tor binary is available; optional I2P eepsite
+- Localized, sanitized operator branding for the shared header, About, Privacy, Terms, and footer
 - Server and CLI interfaces in English, Spanish, French, German, Italian, and Arabic
 
 ## Production
@@ -37,7 +38,8 @@ The production image listens on port 80 and includes `tor` and `i2pd`. Tor is
 managed automatically when its binary is available. I2P is enabled by default
 in an application container; set `I2P_ENABLED=true|false` or use `--i2p` to
 override the setting. Overlay addresses appear in discovery only when the
-respective `server.tor.expose` or `server.i2p.expose` setting is enabled.
+respective `server.tor.expose` or `server.i2p.expose` setting is enabled; the
+same exposure flags control the health response, Help page, and shared footer.
 
 ### Binary
 
@@ -91,6 +93,11 @@ port, and `LISTEN` or `--address` for the listener address. With no port set,
 the server chooses an unused port on a host and uses port 80 in an application
 container.
 
+Operator branding content is stored separately in `yaml.d/branding.yml`. It
+supports localized About and Privacy extensions, Terms overrides, a shared
+header fragment, and a sanitized footer branding block. See the
+[configuration reference](docs/configuration.md) for formats and placement.
+
 The CLI profile is `cli.yml` in the user configuration directory. Set the
 server with `--server` or `TIMEZONES_SERVER_PRIMARY`. For available settings,
 environment inputs, and flags, see the [configuration reference](docs/configuration.md).
@@ -135,9 +142,15 @@ See the [API reference](docs/api.md) for routes, aliases, formats, and examples.
 ## Development
 
 Development and release builds use the Docker Go toolchain configured by the
-Makefile. `make dev` builds the current platform, `make build` builds release
-targets, and `make test` runs the configured Go checks. `./tests/run_tests.sh`
-checks binaries and HTTP behavior in Docker; `./tests/e2e.sh` runs browser
+Makefile. `make build` creates debug binaries for the local platform and all
+eight distribution targets; `make release` creates optimized production
+artifacts, a source archive, and checksums without publishing. `make test` runs
+the lint, vulnerability, unit-test, coverage, and basic binary checks.
+`make docker` builds the host-platform image locally, applies the required OCI
+metadata, and checks the runtime commands and Tor health. The check allows
+offline runners to skip overlay bootstrap unless `REQUIRE_OVERLAY=1` is set.
+`./tests/run_tests.sh` checks binaries and HTTP behavior in Docker;
+`./tests/e2e.sh` runs browser
 checks. `./tests/docker.sh` reuses executable server and CLI binaries supplied
 via `BINDIR`, or builds them with the Docker toolchain otherwise; it checks
 operator and owner/linked-token authorization, authenticated CLI reads and
