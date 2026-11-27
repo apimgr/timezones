@@ -259,10 +259,11 @@ flag, or release build.
 | `auth.token` / `auth.token_file` | `""` / `""` |
 | `output.format` / `output.color` / `output.pager` | `table` / `auto` / `auto` |
 | `output.quiet` / `output.verbose` | `false` / `false` |
-| `tui.enabled` / `tui.theme` | `true` / `dark` |
+| `tui.enabled` / `tui.theme` / `tui.mouse` / `tui.unicode` | `true` / `dark` / `true` / `true` |
 | `display.mode` | `auto` |
 | `logging.level` | `warn` |
-| `logging.file` | `{user_log_dir}/cli.log` |
+| `logging.file` | `""` (uses `{user_log_dir}/cli.log`) |
+| `logging.max_size` / `logging.max_files` | `10MB` / `5` |
 | `cache.enabled` / `cache.ttl` / `cache.max_size` | `true` / `5m` / `100MB` |
 | `debug` | `false` |
 | `update.auto` / `update.check_interval` / `update.channel` | `false` / `per_invocation` / `stable` |
@@ -270,6 +271,12 @@ flag, or release build.
 
 The CLI creates config, data, cache, and log directories with mode `0700` and
 the profile and log file with mode `0600` on Unix-like systems.
+The CLI checks the selected server's published release on each invocation.
+`update.auto: true` installs an available update without prompting only for
+noninteractive runs; interactive runs prompt, while `--update yes` installs
+without prompting and `--update check` only reports availability. The server
+currently publishes one CLI release channel, so `update.channel` must remain
+`stable` and `update.check_interval` must remain `per_invocation`.
 
 ## Environment variables
 
@@ -362,7 +369,7 @@ Explicitly read variables are:
 | `--server` | Server URL |
 | `--token` / `--token-file` | Token value or token file |
 | `--lang` | Output language |
-| `--output {table,json,yaml,plain,csv}` | Output encoding |
+| `--output {table,json,plain}` | Output encoding |
 | `--color {auto,yes,no}` | Color selection |
 | `--limit` | Maximum result count |
 | `--debug` | Enable client debug output |

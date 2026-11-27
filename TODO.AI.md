@@ -29,7 +29,7 @@ This list records verified gaps between `AI.md`, `IDEA.md`, and the current impl
 
 ## Build, governance, and verification
 
-- [ ] Complete the required container, Makefile, CI/release, supply-chain, community, and multi-provider files against AI.md PARTS 25–28 and GitHub requirements.
+- [ ] Complete the required container, Makefile, CI/release, supply-chain, community, and multi-provider files against AI.md PARTS 25–28 and GitHub requirements. GitHub workflows now pass actionlint with shellcheck enabled; the only ignored diagnostic is the installed actionlint version's stale runner-label catalog for the AI.md-mandated `ubuntu-26.04` label. Provider-native workflow validation remains outstanding.
 - [ ] Complete required Docker, Incus, endpoint-coverage, browser E2E, and provider-workflow verification. The latest wrapped `make test` passes vet, vulnerability scanning, and all package tests at 60.1%; browser E2E and provider workflow verification remain outstanding.
 - [ ] Complete the remaining coverage audit for `tests/incus.sh` and `tests/e2e.sh`. In this working tree, both Incus init-system suites pass service, overlay, owner-token, CLI, reboot, and lifecycle scenarios, and the browser suite passes its SSR, no-JavaScript, and full-JavaScript tiers. Retain until the remaining IDEA.md coverage gaps are closed and the changes are committed.
 - [ ] Verify and document timezone dataset provenance and redistribution terms plus third-party dependency licenses in `LICENSE.md`. (The dataset source/hash/license and scanned Go/vendor attributions are recorded in the working tree; remove only after that change is committed.)

@@ -59,13 +59,13 @@ For a local server started on port 8080, use `http://127.0.0.1:8080` as the
 | `token rename ID NAME` | Rename a linked token |
 | `token revoke ID\|primary [--confirm TEXT]` | Revoke a linked token or confirmed primary token |
 
-Use `--output table`, `json`, `yaml`, `plain`, or `csv` to select the output
-format. `--lang` selects a supported language. `--color auto|yes|no` controls
+Use `--output table`, `json`, or `plain` to select the output format.
+`--lang` selects a supported language. `--color auto|yes|no` controls
 color output. `--limit` controls the result count for list and search commands.
 
 ```sh
 timezones-cli --server https://YOUR_SERVER search --output json 'America/New_York'
-timezones-cli --server https://YOUR_SERVER current America/New_York --output yaml
+timezones-cli --server https://YOUR_SERVER current America/New_York --output json
 timezones-cli --server https://YOUR_SERVER list --utc-offset -5 --isdst false --page 2 --limit 50
 timezones-cli --server https://YOUR_SERVER --lang es --output plain EST
 ```

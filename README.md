@@ -77,9 +77,9 @@ timezones-cli --help
 ```
 
 The client also supports `current`, `utc`, `offset`, `abbr`, `value`, `random`,
-`stats`, `count`, token management, table/JSON/YAML/plain/CSV output, and an
-interactive terminal interface. Optional `timezones-cli-gui-{os}-{arch}` builds
-provide a desktop interface.
+`stats`, `count`, token management, table/JSON/plain output, and an interactive
+terminal interface. Optional `timezones-cli-gui-{os}-{arch}` builds provide a
+desktop interface.
 
 ## Configuration
 
