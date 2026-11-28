@@ -70,8 +70,15 @@ timezones-cli --server https://YOUR_SERVER list --utc-offset -5 --isdst false --
 timezones-cli --server https://YOUR_SERVER --lang es --output plain EST
 ```
 
-The client also supports shell integration and completion output through
-`--shell`. The client profile includes server timeout/retry, auth, output,
+Shell integration uses `--shell completions [SHELL]` to print a completion
+script and `--shell init [SHELL]` to print an eval-ready command. If `SHELL` is
+omitted, the client detects it from `$SHELL`. Completion scripts are available
+for bash, zsh, fish, PowerShell, and PowerShell Core (`pwsh`). `sh`, `dash`, and
+`ksh` have no programmable completion, so requesting completions for those
+shells prints usage and exits with status 2; their `init` action prints a safe
+no-op comment. Use `--shell --help` for detailed help.
+
+The client profile includes server timeout/retry, auth, output,
 theme, display, cache, logging, update, language, and default result-limit
 settings. The profile is created with owner-only permissions on Unix-like
 systems.
@@ -99,7 +106,14 @@ timezones --maintenance backup test [/path/to/backup.tar.gz.enc]
 timezones --maintenance scheduler list
 timezones --maintenance scheduler show backup_daily
 timezones --maintenance scheduler run backup_daily
+timezones --maintenance secret rotate encryption_key
 ```
+
+At-rest key rotation requires root or the operator token, a typed confirmation,
+and a second operator-token prompt when token authorization is used. Rotation
+stages `secrets.yml.new`, keeps the previous key wrapped in the database for
+the 30-day recovery window, and re-encrypts token, security-report, DNS, and
+backup-password ciphertext before the server accepts requests after recovery.
 
 Restore is destructive. It checks authorization and validates the archive,
 manifest, extracted paths, and database before applying the backup. Scheduled

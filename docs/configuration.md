@@ -288,7 +288,7 @@ flag, or release build.
 | `logging.max_size` / `logging.max_files` | `10MB` / `5` |
 | `cache.enabled` / `cache.ttl` / `cache.max_size` | `true` / `5m` / `100MB` |
 | `debug` | `false` |
-| `update.auto` / `update.check_interval` / `update.channel` | `false` / `per_invocation` / `stable` |
+| `update.auto` / `update.check_interval` | `false` / `per_invocation` |
 | `defaults.lang` / `defaults.limit` | `auto` / `20` |
 
 The CLI creates config, data, cache, and log directories with mode `0700` and
@@ -299,9 +299,9 @@ directly. If neither pager is installed, output goes directly to stdout.
 The CLI checks the selected server's published release on each invocation.
 `update.auto: true` installs an available update without prompting only for
 noninteractive runs; interactive runs prompt, while `--update yes` installs
-without prompting and `--update check` only reports availability. The server
-currently publishes one CLI release channel, so `update.channel` must remain
-`stable` and `update.check_interval` must remain `per_invocation`.
+without prompting and `--update check` only reports availability. The CLI
+follows the release channel of the server it talks to; there is no CLI-side
+channel setting. `update.check_interval` is always `per_invocation`.
 
 ## Environment variables
 
@@ -322,7 +322,6 @@ currently publishes one CLI release channel, so `update.channel` must remain
 | `SMTP_FROM_NAME` / `SMTP_FROM_EMAIL` | Overrides `server.notifications.email.from.name` / `server.notifications.email.from.email` on configuration load. |
 | `SMTP_TLS` | Overrides `server.notifications.email.smtp.tls` on configuration load. |
 | `SMTP_PORT` | Overrides SMTP port only when it parses as an integer. |
-| `I2P_ENABLED` | Explicit I2P enable/disable setting; a valid `--i2p` flag overrides it. |
 | `APPLICATION_NAME` / `APPLICATION_TAGLINE` | On first run seed `server.branding.title` / `server.branding.description`. |
 | `DATABASE_URL` / `CACHE_URL` | On first run seed connection URLs if not already configured. Existing saved values win. |
 | `DATABASE_DRIVER` | First-run driver selection when applicable; URL scheme takes precedence when it identifies the driver. |
@@ -359,7 +358,7 @@ Explicitly read variables are:
 | `NO_COLOR` / `TERM` | Disable automatic terminal color (`NO_COLOR` set or `TERM=dumb`) |
 | `COLORFGBG` | Terminal background-color detection for automatic theme selection |
 | `SHELL` | Shell selection for shell integration output |
-| `SSH_CLIENT` / `SSH_TTY` / `SSH_CONNECTION` / `MOSH` | Detect remote sessions for GUI availability |
+| `SSH_CLIENT` / `SSH_TTY` / `SSH_CONNECTION` / `MOSH` / `SESSIONNAME` / `STY` / `TMUX` | Detect SSH, Mosh, screen, tmux, and Windows Remote Desktop sessions when selecting GUI or terminal mode |
 | `DISPLAY` / `WAYLAND_DISPLAY` / `OS` / `TERM_PROGRAM` / `__CFBundleIdentifier` / `XPC_SERVICE_NAME` | Detect a local desktop for GUI availability |
 | `XDG_CONFIG_HOME` | Unix user configuration directory base |
 | `APPDATA` / `LOCALAPPDATA` | Windows configuration and data/cache/log directory bases |
@@ -385,6 +384,7 @@ Explicitly read variables are:
 | `--service {--install,--uninstall,--disable,start,stop,restart,reload,--help}` | Service manager operation |
 | `--maintenance on` / `--maintenance off` | Enable or disable runtime maintenance mode |
 | `--maintenance token list` / `revoke PREFIX [--yes]` | List token metadata or revoke a token |
+| `--maintenance secret rotate encryption_key` | Rotate the at-rest AES-256-GCM key; requires typed confirmation and re-encrypts dependent stored values |
 | `--maintenance security list [--status STATUS]` / `show ID` / `export ID [--output FILE]` / `update ID [options]` | Manage security reports; with working SMTP, a changed status sends the researcher a notice without report content |
 | `--maintenance pgp generate` / `rotate` / `publish` / `export` / `import` / `delete` | Manage the PGP key |
 | `--maintenance scheduler list` / `show` / `run` / `enable` / `disable` / `history` | Manage scheduler tasks |
@@ -404,7 +404,9 @@ Explicitly read variables are:
 | `--color {auto,yes,no}` | Color selection |
 | `--limit` | Maximum result count |
 | `--debug` | Enable client debug output |
-| `--shell` | Print shell integration or completion output |
+| `--shell completions [SHELL]` | Print completion script to stdout; auto-detects from `$SHELL` when omitted |
+| `--shell init [SHELL]` | Print an eval-ready shell integration command; `sh`, `dash`, and `ksh` emit a safe no-op comment |
+| `--shell --help` | Show shell integration help |
 | `--update {check,yes}` | Check for or install a CLI update |
 | `list --page` | List page number; default `1` |
 | `list --utc-offset` | Filter by UTC offset |

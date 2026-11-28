@@ -151,6 +151,13 @@ JavaScript dependency notices are included in
 The vendored files are from the official
 [`swagger-api/swagger-ui`](https://github.com/swagger-api/swagger-ui) project.
 
+## Accessibility test dependency
+
+The browser E2E suite vendors axe-core 4.14.1 from the official
+[`dequelabs/axe-core`](https://github.com/dequelabs/axe-core) project under
+MPL-2.0. The unmodified distribution and its third-party notices are included
+in [`tests/e2e/vendor/axe-core-4.14.1/`](tests/e2e/vendor/axe-core-4.14.1/).
+
 ---
 
 ## Embedded Licenses

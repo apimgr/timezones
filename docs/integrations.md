@@ -24,15 +24,21 @@ client.
 The browser interface serves `/`, `/server/about`, `/server/help`,
 `/server/help/mcp`, `/server/privacy`, `/server/terms`, `/server/dpo`,
 `/server/security`, `/server/security/policy`, `/server/security/thanks`,
-`/server/security/report` and `/server/security/report/{tracking_id}`,
-`/server/contact`, `/server/preferences`, `/server/preferences/sync`,
-`/server/preferences/sync/import`, `/server/preferences/tokens`,
+`/server/security/report` and `/server/security/report/{tracking_id}` (status
+links require the one-use-per-day status token), `/server/contact`,
+`/server/preferences`, `/server/preferences/sync`, `/server/preferences/tokens`,
 `/server/docs/swagger`, and `/server/docs/graphql`. Timezone pages are served
 at `/timezones` and `/timezones/search`, `/timezones/random`,
 `/timezones/offset/{offset}`, `/timezones/abbr/{abbr}`, `/timezones/utc/{id}`,
 `/timezones/value/{name}`, and `/timezones/current/{id}`, with `/stats` and
 `/count` for dataset summaries. The contact page accepts security reports as
 well as general contact submissions.
+
+`GET /server/preferences/sync/import` is an import action that applies a
+shared preference code and redirects; it is not a registered page or a
+navigation destination. Security report status is available only through the
+web routes and its emailed status link; there is no API mirror for that
+one-time status credential.
 
 - REST API: `/api/v1/`
 - OpenAPI JSON: `/api/v1/server/swagger`

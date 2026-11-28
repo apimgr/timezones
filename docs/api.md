@@ -152,21 +152,30 @@ limited to four fields. The explorer is at `/server/docs/graphql`.
 These unversioned paths directly mount the same handlers as their canonical
 versioned routes; they do not redirect:
 
-| Alias | Canonical route |
-|---|---|
-| `/api/swagger` | `/api/v1/server/swagger` |
-| `/api/graphql` | `/api/v1/server/graphql` |
-| `/api/healthz` | `/api/v1/server/healthz` |
-| `/api/healthz.txt` | `/api/v1/server/healthz.txt` |
-| `/api/metrics[/{service}]` | `/api/v1/server/metrics[/{service}]` |
-| `/metrics[/{service}]` | `/api/v1/server/metrics[/{service}]` |
-| `/api/mcp` | `/api/v1/server/mcp` |
-| `/mcp` | `/api/v1/server/mcp` |
+| Alias | Canonical route | Notes |
+|---|---|---|
+| `GET /api/swagger` | `GET /api/v1/server/swagger` | OpenAPI JSON |
+| `GET, POST /api/graphql` | `GET, POST /api/v1/server/graphql` | Read-only GraphQL queries |
+| `GET /api/healthz` | `GET /api/v1/server/healthz` | Public health document |
+| `GET /api/metrics` | `GET /api/v1/server/metrics` | Prometheus; service credential required unless disabled by configuration |
+| `GET /api/metrics/{service}` | `GET /api/v1/server/metrics/{service}` | `prometheus`, `grafana`, or `loki`; service credential required unless disabled by configuration |
+| `GET /metrics` | `GET /api/v1/server/metrics` | Prometheus; service credential required unless disabled by configuration |
+| `GET /metrics/{service}` | `GET /api/v1/server/metrics/{service}` | `prometheus`, `grafana`, or `loki`; service credential required unless disabled by configuration |
+| `POST /api/mcp`, `POST /mcp` | `POST /api/v1/server/mcp` | Streamable HTTP; Bearer token required |
 
 `GET /api/autodiscover` is unversioned by design. It returns server identity,
 the current API version, public origins, and CLI release metadata. Verified
 binary downloads use `GET /cli/binaries/{binary}`; only recognized artifacts
-with a valid release manifest and SHA-256 checksum are served.
+with a valid release manifest and SHA-256 checksum are served. Set
+`cli.binary_download.require_auth` to require a Bearer token for downloads.
+
+All registered REST routes support the JSON default and a plain-text view via
+`.txt` or `Accept: text/plain`, except binary downloads. GraphQL returns its
+standard response object for JSON requests; API text negotiation formats JSON
+data as plain text. MCP keeps its JSON-RPC transport. REST errors use
+`{ "ok": false,
+"error": "CODE", "message": "..." }`; the message follows the request
+language while the machine-readable code remains stable.
 
 The interactive OpenAPI page is `/server/docs/swagger`; its JSON document is
 served at `/api/v1/server/swagger`. The API route inventory in

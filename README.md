@@ -58,12 +58,11 @@ sudo install -m 0755 timezones /usr/local/bin/timezones
 
 ### systemd
 
-After installing `timezones` on a Linux host managed by systemd, register and
-start the service:
+After installing `timezones` on a Linux host managed by systemd, install,
+enable, and start the service:
 
 ```sh
-sudo timezones --service install
-sudo systemctl enable --now timezones
+sudo timezones --service --install
 ```
 
 ## Client
@@ -81,7 +80,8 @@ timezones-cli --help
 The client also supports `current`, `utc`, `offset`, `abbr`, `value`, `random`,
 `stats`, `count`, token management, table/JSON/plain output, and an interactive
 terminal interface. Optional `timezones-cli-gui-{os}-{arch}` builds provide a
-desktop interface.
+desktop interface. The GUI toolkit does not yet provide platform accessibility
+adapters for screen readers; use the TUI or CLI for accessible operation.
 
 ## Configuration
 
