@@ -183,10 +183,14 @@ when SMTP is configured (address and message); and user-initiated sharing
 | `server.security.blocklists.log_blocked` | `true` |
 | `server.security.blocklists.extra_sources` | `[]` |
 | `server.security.allowlist` | `[]` (list of `{cidr, description}` entries) |
+| `web.security.report_url` | GitHub private vulnerability reporting URL |
+| `web.security.keyservers` | `[]` publishes nowhere; configure bare host names to publish the PGP public key |
+| `web.security.expires` | One year after PGP key generation |
+| `web.security.policy` | `""` (built-in coordinated disclosure policy) |
 | `server.notifications.email.smtp.host` | `""` |
 | `server.notifications.email.smtp.port` | `587` |
 | `server.notifications.email.smtp.username` / `password` | `""` / `""` |
-| `server.notifications.email.smtp.from_name` / `from_email` | `""` / `""` |
+| `server.notifications.email.from.name` / `from.email` | `""` / `""` |
 | `server.notifications.email.smtp.tls` | `auto` |
 | `server.pages.contact.captcha_secret_key` | `""` |
 | `server.pages.help.mcp` | Project-specific Markdown for the MCP help page; edit through `yaml.d/pages.yml` |
@@ -221,7 +225,9 @@ when SMTP is configured (address and message); and user-initiated sharing
 | `server.scheduler.tasks.health_check.enabled` / `schedule` | `true` / `*/5 * * * *` |
 | `server.scheduler.tasks.tor_health.enabled` / `schedule` | `true` / `*/10 * * * *` |
 
-Schedules use cron expressions.
+Every task also accepts `server.scheduler.tasks.{id}.timeout`, a positive
+duration that defaults to `1h` and limits one run. Schedules use cron
+expressions.
 
 ### Maintenance defaults
 
@@ -230,6 +236,8 @@ Schedules use cron expressions.
 | `server.maintenance.self_healing.retry_interval` / `max_attempts` | `30s` / `0` (unlimited retries) |
 | `server.maintenance.cleanup.disk_threshold` / `log_retention_days` | `90%` / `7` days |
 | `server.maintenance.notify.on_enter` / `on_exit` | `true` / `true` |
+| `cli.binary_download.dir` | `{data_dir}/cli` |
+| `cli.binary_download.require_auth` | `false` |
 
 ### Branding, search metadata, browser, and data provider
 
